@@ -1,3 +1,17 @@
+class DateRange {
+  final DateTime startDate;
+  final DateTime endDate;
+  DateRange({required this.startDate, required this.endDate});
+  Map<String, dynamic> toMap() => {
+    'startDate': startDate.toUtc(),
+    'endDate': endDate.toUtc(),
+  };
+  factory DateRange.fromMap(Map<String, dynamic> map) => DateRange(
+    startDate: map['startDate'] is DateTime ? map['startDate'] : (map['startDate'] as dynamic).toDate() as DateTime,
+    endDate: map['endDate'] is DateTime ? map['endDate'] : (map['endDate'] as dynamic).toDate() as DateTime,
+  );
+}
+
 class Tool {
   final String id;
   final String ownerId;
@@ -18,8 +32,8 @@ class Tool {
   final bool isSuspicious;
   final bool isVerified;
   final String visibility;
-  final List<DateTime> bookedDates;
-  final List<DateTime> blockedDates;
+  final List<DateRange> bookedRanges;
+  final List<DateRange> blockedRanges;
   final double ownerTrustScore;
   final int bookingCount;
   final double ratingScore;
@@ -43,8 +57,8 @@ class Tool {
     this.isSuspicious = false,
     this.isVerified = false,
     this.visibility = 'visible',
-    this.bookedDates = const [],
-    this.blockedDates = const [],
+    this.bookedRanges = const [],
+    this.blockedRanges = const [],
     this.ownerTrustScore = 0.0,
     this.bookingCount = 0,
     this.ratingScore = 0.0,
@@ -68,8 +82,8 @@ class Tool {
         'isSuspicious': isSuspicious,
         'isVerified': isVerified,
         'visibility': visibility,
-        'bookedDates': bookedDates.map((d) => d.toUtc()).toList(),
-        'blockedDates': blockedDates.map((d) => d.toUtc()).toList(),
+        'bookedRanges': bookedRanges.map((r) => r.toMap()).toList(),
+        'blockedRanges': blockedRanges.map((r) => r.toMap()).toList(),
         'ownerTrustScore': ownerTrustScore,
         'bookingCount': bookingCount,
         'ratingScore': ratingScore,
@@ -94,12 +108,12 @@ class Tool {
         isSuspicious: map['isSuspicious'] as bool? ?? false,
         isVerified: map['isVerified'] as bool? ?? false,
         visibility: map['visibility'] as String? ?? 'visible',
-        bookedDates: (map['bookedDates'] as List<dynamic>?)
-                ?.map((d) => d is DateTime ? d : (d as dynamic).toDate() as DateTime)
+        bookedRanges: (map['bookedRanges'] as List<dynamic>?)
+                ?.map((r) => DateRange.fromMap(r as Map<String, dynamic>))
                 .toList() ??
             const [],
-        blockedDates: (map['blockedDates'] as List<dynamic>?)
-                ?.map((d) => d is DateTime ? d : (d as dynamic).toDate() as DateTime)
+        blockedRanges: (map['blockedRanges'] as List<dynamic>?)
+                ?.map((r) => DateRange.fromMap(r as Map<String, dynamic>))
                 .toList() ??
             const [],
         ownerTrustScore: (map['ownerTrustScore'] as num?)?.toDouble() ?? 0.0,

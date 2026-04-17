@@ -69,16 +69,11 @@ class BookingsService {
            final toolRef = FirebaseFirestore.instance.collection('tools').doc(toolId);
            final start = (data['startDate'] as dynamic).toDate() as DateTime;
            final end = (data['endDate'] as dynamic).toDate() as DateTime;
-           
-           List<DateTime> days = [];
-           DateTime current = DateTime(start.year, start.month, start.day);
-           DateTime last = DateTime(end.year, end.month, end.day);
-           while (current.isBefore(last) || current.isAtSameMomentAs(last)) {
-             days.add(current.toUtc());
-             current = current.add(const Duration(days: 1));
-           }
            transaction.update(toolRef, {
-             'bookedDates': FieldValue.arrayUnion(days)
+             'bookedRanges': FieldValue.arrayUnion([{
+               'startDate': start.toUtc(),
+               'endDate': end.toUtc()
+             }])
            });
          }
        }

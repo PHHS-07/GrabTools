@@ -212,8 +212,13 @@ class ToolDetailsScreen extends StatelessWidget {
                           firstDate: DateTime.now(),
                           lastDate: DateTime.now().add(const Duration(days: 365)),
                           selectableDayPredicate: (DateTime day) {
-                            bool isBooked = t.bookedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
-                            bool isBlocked = t.blockedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
+                            final d = DateTime.utc(day.year, day.month, day.day);
+                            bool isBooked = t.bookedRanges.any((r) =>
+                                (d.isAfter(r.startDate) || d.isAtSameMomentAs(r.startDate)) &&
+                                (d.isBefore(r.endDate) || d.isAtSameMomentAs(r.endDate)));
+                            bool isBlocked = t.blockedRanges.any((r) =>
+                                (d.isAfter(r.startDate) || d.isAtSameMomentAs(r.startDate)) &&
+                                (d.isBefore(r.endDate) || d.isAtSameMomentAs(r.endDate)));
                             return !isBooked && !isBlocked;
                           },
                           helpText: 'Availability Calendar (Gray = Unavailable)',

@@ -152,9 +152,22 @@ class _AddToolScreenState extends State<AddToolScreen> {
     try {
       final auth = context.read<AuthProvider>();
       final owner = auth.user;
-      if (owner == null) {
+      final profile = auth.profile;
+      if (owner == null || profile == null) {
         showErrorAlert(context, 'Please sign in again and try.');
         return;
+      }
+
+      final toolsService = ToolsService();
+      if (profile.trustScore < 50) {
+        final currentTools = await toolsService.streamToolsByOwner(owner.uid).first;
+        if (currentTools.length >= 2) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            showErrorAlert(context, 'Your trust score is below 50. You cannot have more than 2 active listings.');
+          }
+          return;
+        }
       }
 
       final ownerId = owner.uid;
@@ -192,12 +205,11 @@ class _AddToolScreenState extends State<AddToolScreen> {
         conditionStatus: _selectedConditionStatus ?? '',
         termsAndConditions: _selectedTcOption == _tcStrict ? _tcStrict : null,
         available: true,
-        isSuspicious: false,
+        isSuspicious: profile.trustScore < 50, // automatically flag for manual approval if < 50
         isVerified: false,
         visibility: 'visible',
       );
 
-      final toolsService = ToolsService();
       await toolsService.addTool(tool);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tool created!')));

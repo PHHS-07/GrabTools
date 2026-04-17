@@ -355,13 +355,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ),
             if (booking.status.toLowerCase() == 'confirmed')
               ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: const Text('Mark as Picked Up (In Progress)'),
+                leading: const Icon(Icons.check_circle_outline),
+                title: const Text('Mark as Completed'),
                 onTap: () async {
                   Navigator.pop(sheetContext);
-                  await BookingsService().updateBookingStatus(booking.id, 'in_progress');
+                  await BookingsService().updateBookingStatus(booking.id, 'completed');
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking marked as in progress')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking marked as completed')));
                 },
               ),
             if (_canReturnBooking(booking))

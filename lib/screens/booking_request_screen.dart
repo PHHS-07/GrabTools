@@ -32,8 +32,13 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
   }
 
   bool _isDateAvailable(DateTime day) {
-    bool isBooked = widget.tool.bookedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
-    bool isBlocked = widget.tool.blockedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
+    final d = DateTime.utc(day.year, day.month, day.day);
+    bool isBooked = widget.tool.bookedRanges.any((range) =>
+        (d.isAfter(range.startDate) || d.isAtSameMomentAs(range.startDate)) &&
+        (d.isBefore(range.endDate) || d.isAtSameMomentAs(range.endDate)));
+    bool isBlocked = widget.tool.blockedRanges.any((range) =>
+        (d.isAfter(range.startDate) || d.isAtSameMomentAs(range.startDate)) &&
+        (d.isBefore(range.endDate) || d.isAtSameMomentAs(range.endDate)));
     return !isBooked && !isBlocked;
   }
 
@@ -150,6 +155,17 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
 
   Future<void> _submit() async {
     if (!mounted) return;
+    
+    final auth = context.read<AuthProvider>();
+    final profile = auth.profile;
+    
+    if (profile == null || profile.trustScore < 40) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your trust score is too low to create bookings.')),
+      );
+      return;
+    }
+
     if (!widget.tool.available) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('This tool is marked as unavailable by the lender')),
