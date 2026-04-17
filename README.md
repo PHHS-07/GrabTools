@@ -71,4 +71,4 @@ flutter run
 ---
 
 ## 📄 License & Contribution
-This project is proprietary or open for respective contributions depending on the hosting agreement. Please see the license accompanying this project or contact the repository owner.
+This project is proprietary or open for respective contributions depending on the hosting agreement. Please see the license accompanying this project or contact us.
