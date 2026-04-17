@@ -201,6 +201,30 @@ class ToolDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          selectableDayPredicate: (DateTime day) {
+                            bool isBooked = t.bookedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
+                            bool isBlocked = t.blockedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
+                            return !isBooked && !isBlocked;
+                          },
+                          helpText: 'Availability Calendar (Gray = Unavailable)',
+                          cancelText: 'Close',
+                          confirmText: 'OK',
+                        );
+                      },
+                      icon: const Icon(Icons.calendar_month),
+                      label: const Text('View Availability Calendar'),
+                    ),
+                  ),
                   if (t.termsAndConditions?.trim().isNotEmpty == true) ...[
                     const SizedBox(height: 12),
                     const Text('Terms and Conditions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),

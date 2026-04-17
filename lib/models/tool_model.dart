@@ -18,6 +18,11 @@ class Tool {
   final bool isSuspicious;
   final bool isVerified;
   final String visibility;
+  final List<DateTime> bookedDates;
+  final List<DateTime> blockedDates;
+  final double ownerTrustScore;
+  final int bookingCount;
+  final double ratingScore;
 
   Tool({
     required this.id,
@@ -38,6 +43,11 @@ class Tool {
     this.isSuspicious = false,
     this.isVerified = false,
     this.visibility = 'visible',
+    this.bookedDates = const [],
+    this.blockedDates = const [],
+    this.ownerTrustScore = 0.0,
+    this.bookingCount = 0,
+    this.ratingScore = 0.0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -58,6 +68,11 @@ class Tool {
         'isSuspicious': isSuspicious,
         'isVerified': isVerified,
         'visibility': visibility,
+        'bookedDates': bookedDates.map((d) => d.toUtc()).toList(),
+        'blockedDates': blockedDates.map((d) => d.toUtc()).toList(),
+        'ownerTrustScore': ownerTrustScore,
+        'bookingCount': bookingCount,
+        'ratingScore': ratingScore,
       };
 
   factory Tool.fromMap(String id, Map<String, dynamic> map) => Tool(
@@ -79,5 +94,16 @@ class Tool {
         isSuspicious: map['isSuspicious'] as bool? ?? false,
         isVerified: map['isVerified'] as bool? ?? false,
         visibility: map['visibility'] as String? ?? 'visible',
+        bookedDates: (map['bookedDates'] as List<dynamic>?)
+                ?.map((d) => d is DateTime ? d : (d as dynamic).toDate() as DateTime)
+                .toList() ??
+            const [],
+        blockedDates: (map['blockedDates'] as List<dynamic>?)
+                ?.map((d) => d is DateTime ? d : (d as dynamic).toDate() as DateTime)
+                .toList() ??
+            const [],
+        ownerTrustScore: (map['ownerTrustScore'] as num?)?.toDouble() ?? 0.0,
+        bookingCount: (map['bookingCount'] as num?)?.toInt() ?? 0,
+        ratingScore: (map['ratingScore'] as num?)?.toDouble() ?? 0.0,
       );
 }

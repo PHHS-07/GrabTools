@@ -84,7 +84,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
     return normalizedStatus == 'completed' ||
         normalizedStatus == 'finished' ||
         normalizedStatus == 'cancelled' ||
-        normalizedStatus == 'rejected';
+        normalizedStatus == 'rejected' ||
+        normalizedStatus == 'expired';
   }
 
   bool _canExtendBooking(Booking booking) {
@@ -92,6 +93,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
     final normalizedStatus = booking.status.toLowerCase();
     return (normalizedStatus == 'requested' ||
             normalizedStatus == 'approved' ||
+            normalizedStatus == 'confirmed' ||
+            normalizedStatus == 'in_progress' ||
             normalizedStatus == 'active') &&
         !_hasPendingActionRequest(booking);
   }
@@ -108,7 +111,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
   bool _canReturnBooking(Booking booking) {
     if (_isHistoryBooking(booking)) return false;
     final normalizedStatus = booking.status.toLowerCase();
-    return (normalizedStatus == 'approved' || normalizedStatus == 'active') &&
+    return (normalizedStatus == 'in_progress' || normalizedStatus == 'active') &&
         !_hasPendingActionRequest(booking);
   }
 
@@ -341,13 +344,24 @@ class _BookingsScreenState extends State<BookingsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_canExtendBooking(booking))
+             if (_canExtendBooking(booking))
               ListTile(
                 leading: const Icon(Icons.schedule),
                 title: const Text('Extend'),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   await _extendBooking(booking);
+                },
+              ),
+            if (booking.status.toLowerCase() == 'confirmed')
+              ListTile(
+                leading: const Icon(Icons.play_arrow),
+                title: const Text('Mark as Picked Up (In Progress)'),
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  await BookingsService().updateBookingStatus(booking.id, 'in_progress');
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking marked as in progress')));
                 },
               ),
             if (_canReturnBooking(booking))
@@ -440,13 +454,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   Color _getStatusColor(String status) {
     final s = status.toLowerCase();
-    if (s == 'approved' || s == 'finished' || s == 'completed' || s == 'active') {
+    if (s == 'approved' || s == 'confirmed') {
+      return Colors.blue;
+    }
+    if (s == 'in_progress' || s == 'active' || s == 'finished' || s == 'completed') {
       return Colors.green;
     }
     if (s == 'pending' || s == 'waiting' || s == 'requested') {
       return Colors.orange;
     }
-    if (s == 'rejected' || s == 'cancelled') {
+    if (s == 'rejected' || s == 'cancelled' || s == 'expired') {
       return Colors.red;
     }
     return Colors.grey;
@@ -486,8 +503,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
             padding: const EdgeInsets.only(top: 8),
             child: Text(subtitleLines.join('\n')),
           ),
-          trailing: isLender && (_canReviewBooking(booking) || _hasPendingActionRequest(booking))
-              ? Row(
+          trailing: Builder(
+            builder: (context) {
+              if (isLender && (_canReviewBooking(booking) || _hasPendingActionRequest(booking))) {
+                return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
@@ -521,8 +540,21 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       },
                     ),
                   ],
-                )
-              : null,
+                );
+              } else if (!isLender && booking.status.toLowerCase() == 'approved') {
+                return ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                  onPressed: () async {
+                    await BookingsService().updateBookingStatus(booking.id, 'confirmed');
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Confirmed! Dates reserved in calendar.')));
+                  },
+                  child: const Text('Confirm Payment'),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );

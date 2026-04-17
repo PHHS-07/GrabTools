@@ -204,3 +204,27 @@ exports.onReportCreated = functions.firestore
             }
         }
     });
+
+exports.expireUnconfirmedBookings = functions.pubsub.schedule('every 1 hours').onRun(async (context) => {
+    const db = admin.firestore();
+    const now = new Date();
+    const expiryLimit = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+
+    const snapshot = await db.collection('bookings')
+        .where('status', '==', 'approved')
+        .where('updatedAt', '<', admin.firestore.Timestamp.fromDate(expiryLimit))
+        .get();
+
+    if (snapshot.empty) return null;
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, {
+            status: 'expired',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+    });
+
+    await batch.commit();
+    return null;
+});

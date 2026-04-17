@@ -31,6 +31,12 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
     return (minutes / (24 * 60)).ceilToDouble();
   }
 
+  bool _isDateAvailable(DateTime day) {
+    bool isBooked = widget.tool.bookedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
+    bool isBlocked = widget.tool.blockedDates.any((d) => d.toLocal().year == day.year && d.toLocal().month == day.month && d.toLocal().day == day.day);
+    return !isBooked && !isBlocked;
+  }
+
   Future<void> _pickStart() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -38,6 +44,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
       initialDate: now,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
+      selectableDayPredicate: _isDateAvailable,
     );
     if (picked != null) {
       setState(() {
@@ -63,6 +70,7 @@ class _BookingRequestScreenState extends State<BookingRequestScreen> {
       initialDate: _start ?? now,
       firstDate: _start ?? now,
       lastDate: now.add(const Duration(days: 365)),
+      selectableDayPredicate: _isDateAvailable,
     );
     if (picked != null) {
       setState(() {

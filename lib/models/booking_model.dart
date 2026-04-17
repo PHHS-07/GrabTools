@@ -7,7 +7,7 @@ class Booking {
   final String lenderId;
   final DateTime startDate;
   final DateTime endDate;
-  final String status; // requested, approved, rejected, active, completed, cancelled
+  final String status; // requested, approved, confirmed, in_progress, completed, cancelled, expired, rejected
   final double totalPrice;
   final String paymentStatus; // unpaid, pending_verification
   final String? paymentMethod;
@@ -17,6 +17,8 @@ class Booking {
   final String? pendingActionPaymentMode;
   final DateTime? requestedEndDate;
   final double? requestedTotalPrice;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Booking({
     required this.id,
@@ -37,6 +39,8 @@ class Booking {
     this.pendingActionPaymentMode,
     this.requestedEndDate,
     this.requestedTotalPrice,
+    this.createdAt,
+    this.updatedAt,
   });
 
   String get displayBookingId =>
@@ -60,6 +64,8 @@ class Booking {
         'pendingActionPaymentMode': pendingActionPaymentMode,
         'requestedEndDate': requestedEndDate?.toUtc(),
         'requestedTotalPrice': requestedTotalPrice,
+        'createdAt': createdAt?.toUtc(),
+        'updatedAt': updatedAt?.toUtc(),
       };
 
   factory Booking.fromMap(String id, Map<String, dynamic> map) => Booking(
@@ -89,5 +95,11 @@ class Booking {
                 ? map['requestedEndDate'] as DateTime
                 : (map['requestedEndDate'] as dynamic).toDate() as DateTime),
         requestedTotalPrice: (map['requestedTotalPrice'] as num?)?.toDouble(),
+        createdAt: map['createdAt'] != null
+            ? (map['createdAt'] is DateTime ? map['createdAt'] as DateTime : (map['createdAt'] as dynamic).toDate() as DateTime)
+            : null,
+        updatedAt: map['updatedAt'] != null
+            ? (map['updatedAt'] is DateTime ? map['updatedAt'] as DateTime : (map['updatedAt'] as dynamic).toDate() as DateTime)
+            : null,
       );
 }

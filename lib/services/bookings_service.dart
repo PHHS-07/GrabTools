@@ -15,6 +15,7 @@ class BookingsService {
       final nextCounter = currentCounter + 1;
 
       transaction.set(counters, {'bookingCounter': nextCounter}, SetOptions(merge: true));
+      final now = DateTime.now().toUtc();
       transaction.set(
         docRef,
         Booking(
@@ -36,6 +37,8 @@ class BookingsService {
           pendingActionPaymentMode: booking.pendingActionPaymentMode,
           requestedEndDate: booking.requestedEndDate,
           requestedTotalPrice: booking.requestedTotalPrice,
+          createdAt: now,
+          updatedAt: now,
         ).toMap(),
       );
     });
@@ -52,7 +55,34 @@ class BookingsService {
     final snapshot = await docRef.get();
     if (!snapshot.exists) return;
     final data = snapshot.data() as Map<String, dynamic>;
-    await docRef.update({'status': status});
+    
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+       transaction.update(docRef, {
+         'status': status,
+         'updatedAt': DateTime.now().toUtc(),
+       });
+
+       // Update tool bookedDates upon confirmation
+       if (status == 'confirmed') {
+         final toolId = data['toolId'] as String?;
+         if (toolId != null) {
+           final toolRef = FirebaseFirestore.instance.collection('tools').doc(toolId);
+           final start = (data['startDate'] as dynamic).toDate() as DateTime;
+           final end = (data['endDate'] as dynamic).toDate() as DateTime;
+           
+           List<DateTime> days = [];
+           DateTime current = DateTime(start.year, start.month, start.day);
+           DateTime last = DateTime(end.year, end.month, end.day);
+           while (current.isBefore(last) || current.isAtSameMomentAs(last)) {
+             days.add(current.toUtc());
+             current = current.add(const Duration(days: 1));
+           }
+           transaction.update(toolRef, {
+             'bookedDates': FieldValue.arrayUnion(days)
+           });
+         }
+       }
+    });
 
     // If booking completed, credit lender earnings
     if (status == 'completed') {
@@ -139,6 +169,7 @@ class BookingsService {
         'pendingActionPaymentMode': FieldValue.delete(),
         'requestedEndDate': FieldValue.delete(),
         'requestedTotalPrice': FieldValue.delete(),
+        'updatedAt': DateTime.now().toUtc(),
       };
 
       if (approve) {
@@ -184,7 +215,7 @@ class BookingsService {
           .map(_mapBooking)
           .any((booking) {
             final normalizedStatus = booking.status.toLowerCase();
-            final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'active';
+            final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'confirmed' || normalizedStatus == 'in_progress';
             if (!isAccepted) return false;
             // Unavailable as soon as approved — covers both upcoming and ongoing bookings.
             // Only clears once the booking end date has passed.
@@ -208,7 +239,7 @@ class BookingsService {
         .map(_mapBooking)
         .any((booking) {
           final normalizedStatus = booking.status.toLowerCase();
-          final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'active';
+          final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'confirmed' || normalizedStatus == 'in_progress';
           if (!isAccepted) return false;
 
           // Check for date overlap: (StartA <= EndB) and (EndA >= StartB)

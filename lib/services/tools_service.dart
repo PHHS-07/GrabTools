@@ -28,10 +28,18 @@ class ToolsService {
   Stream<List<Tool>> streamTools({String? category}) {
     Query query = tools.orderBy('title');
     if (category != null) query = query.where('categories', arrayContains: category);
-    return query.snapshots().map((s) => s.docs
-        .map((d) => Tool.fromMap(d.id, d.data() as Map<String, dynamic>))
-        .where((t) => t.visibility != 'hidden')
-        .toList());
+    return query.snapshots().map((s) {
+      final list = s.docs
+          .map((d) => Tool.fromMap(d.id, d.data() as Map<String, dynamic>))
+          .where((t) => t.visibility != 'hidden')
+          .toList();
+      list.sort((a, b) {
+        final rankA = (a.ownerTrustScore * 0.4) + (a.ratingScore * 0.3) + (a.bookingCount * 0.2);
+        final rankB = (b.ownerTrustScore * 0.4) + (b.ratingScore * 0.3) + (b.bookingCount * 0.2);
+        return rankB.compareTo(rankA);
+      });
+      return list;
+    });
   }
 
   /// Get tools near a location (within radiusKm)
@@ -67,21 +75,22 @@ class ToolsService {
         return distance <= radiusKm;
       }).toList();
 
-      // Sort by distance
+      // Sort by dynamic ranking score
       nearbyTools.sort((a, b) {
         final distA = LocationService.calculateDistance(
-          userLat,
-          userLng,
-          a.location!['lat'] as double,
-          a.location!['lng'] as double,
+          userLat, userLng, a.location!['lat'] as double, a.location!['lng'] as double,
         );
         final distB = LocationService.calculateDistance(
-          userLat,
-          userLng,
-          b.location!['lat'] as double,
-          b.location!['lng'] as double,
+          userLat, userLng, b.location!['lat'] as double, b.location!['lng'] as double,
         );
-        return distA.compareTo(distB);
+        
+        final proxA = radiusKm > 0 ? ((radiusKm - distA) / radiusKm) * 100 : 0.0;
+        final proxB = radiusKm > 0 ? ((radiusKm - distB) / radiusKm) * 100 : 0.0;
+
+        final rankA = (a.ownerTrustScore * 0.4) + (a.ratingScore * 0.3) + (a.bookingCount * 0.2) + (proxA * 0.1);
+        final rankB = (b.ownerTrustScore * 0.4) + (b.ratingScore * 0.3) + (b.bookingCount * 0.2) + (proxB * 0.1);
+        
+        return rankB.compareTo(rankA);
       });
 
       return nearbyTools;
