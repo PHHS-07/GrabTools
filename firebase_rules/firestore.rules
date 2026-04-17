@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users - allow users to read their own profile and admins to read all
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+                      (request.auth.uid == userId && (!request.resource.data.keys().hasAny(['trustScore']) || request.resource.data.trustScore == resource.data.trustScore))
+                      || isAdmin()
+                    );
+    }
+
+    // Tools - owners can create/update/delete their tools, others can read
+    match /tools/{toolId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid 
+                    && request.resource.data.isSuspicious == false 
+                    && request.resource.data.isVerified == false
+                    && request.resource.data.visibility == 'visible';
+      allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid 
+                    && request.resource.data.isSuspicious == resource.data.isSuspicious
+                    && request.resource.data.isVerified == resource.data.isVerified
+                    && request.resource.data.visibility == resource.data.visibility) || isAdmin();
+      allow delete: if (request.auth != null && resource.data.ownerId == request.auth.uid) || isAdmin();
+    }
+
+    // App Meta - allow authenticated users to read/update the counters for bookings
+    match /app_meta/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Bookings - renters create bookings, lender/admin can update status, renter can ask for extension/return
+    match /bookings/{bookingId} {
+      allow create: if request.auth != null && request.resource.data.renterId == request.auth.uid && request.resource.data.lenderId != request.auth.uid;
+      allow read: if request.auth != null;
+      allow update: if request.auth != null && (request.auth.uid == resource.data.lenderId || request.auth.uid == resource.data.renterId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Reviews - any authenticated user who rented can write (enforced in app), anyone can read
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin() || request.auth.uid == resource.data.userId;
+    }
+
+    // Ratings - any authenticated user can read and create their own rating
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.reviewerId == request.auth.uid;
+      allow update, delete: if isAdmin() || request.auth.uid == resource.data.reviewerId;
+    }
+
+    // Reports - authenticated users can create, admins can read
+    match /reports/{reportId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if request.auth != null && request.resource.data.reporterId == request.auth.uid;
+    }
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
