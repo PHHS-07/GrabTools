@@ -99,9 +99,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
         !_hasPendingActionRequest(booking);
   }
 
-  bool _canReviewBooking(Booking booking) {
-    return booking.status.toLowerCase() == 'requested';
-  }
 
   bool _hasPendingActionRequest(Booking booking) {
     return booking.pendingActionStatus == 'requested' &&
@@ -578,6 +575,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         aiToolMatch: true,
                         gpsMatch: true,
                       );
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proof Submitted Successfully.')));
                     },
                     child: const Text('Upload Proof'),
