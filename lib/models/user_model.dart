@@ -13,6 +13,16 @@ class AppUser {
   final double earnings;
   final int trustScore;
 
+  // New Trust & Stabilization Fields
+  final String? deviceId;
+  final DateTime? lastLoginAt;
+  final int verificationLevel; // 1: OTP, 2: ID, 3: Trusted
+  final String? idDocumentUrl;
+  final double cancellationRate;
+  final int totalBookings;
+  final int totalCancellations;
+  final bool isSuspicious;
+
   AppUser({
     required this.id,
     required this.email,
@@ -27,6 +37,14 @@ class AppUser {
     this.paymentMode,
     this.earnings = 0.0,
     this.trustScore = 50,
+    this.deviceId,
+    this.lastLoginAt,
+    this.verificationLevel = 1,
+    this.idDocumentUrl,
+    this.cancellationRate = 0.0,
+    this.totalBookings = 0,
+    this.totalCancellations = 0,
+    this.isSuspicious = false,
   });
 
   Map<String, dynamic> toMap() => {
@@ -43,6 +61,14 @@ class AppUser {
         'paymentMode': paymentMode,
         'earnings': earnings,
         'trustScore': trustScore,
+        'deviceId': deviceId,
+        'lastLoginAt': lastLoginAt?.toUtc(),
+        'verificationLevel': verificationLevel,
+        'idDocumentUrl': idDocumentUrl,
+        'cancellationRate': cancellationRate,
+        'totalBookings': totalBookings,
+        'totalCancellations': totalCancellations,
+        'isSuspicious': isSuspicious,
       };
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) => AppUser(
@@ -63,5 +89,17 @@ class AppUser {
         paymentMode: map['paymentMode'] as String?,
         earnings: (map['earnings'] as num?)?.toDouble() ?? 0.0,
         trustScore: (map['trustScore'] as num?)?.toInt() ?? 50,
+        deviceId: map['deviceId'] as String?,
+        lastLoginAt: map['lastLoginAt'] == null
+            ? null
+            : (map['lastLoginAt'] is DateTime
+                ? map['lastLoginAt'] as DateTime
+                : (map['lastLoginAt'] as dynamic).toDate() as DateTime),
+        verificationLevel: (map['verificationLevel'] as num?)?.toInt() ?? 1,
+        idDocumentUrl: map['idDocumentUrl'] as String?,
+        cancellationRate: (map['cancellationRate'] as num?)?.toDouble() ?? 0.0,
+        totalBookings: (map['totalBookings'] as num?)?.toInt() ?? 0,
+        totalCancellations: (map['totalCancellations'] as num?)?.toInt() ?? 0,
+        isSuspicious: map['isSuspicious'] as bool? ?? false,
       );
 }

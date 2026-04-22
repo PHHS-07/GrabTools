@@ -42,13 +42,15 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         isAdmin() ||
         (request.auth.uid == resource.data.renterId && (
-           (resource.data.status == 'approved' && request.resource.data.status == 'confirmed') ||
-           (resource.data.status == 'confirmed' && request.resource.data.status == 'completed') ||
+           (resource.data.status == 'approved' && request.resource.data.status == 'paid' && request.resource.data.paymentStatus == 'paid') ||
            (request.resource.data.status == 'cancelled') ||
-           (request.resource.data.status == resource.data.status)
+           (request.resource.data.status == resource.data.status) // metadata updates (like proof fields)
         )) ||
         (request.auth.uid == resource.data.lenderId && (
-           (resource.data.status == 'requested' && (request.resource.data.status == 'approved' || request.resource.data.status == 'cancelled')) ||
+           (resource.data.status == 'requested' && request.resource.data.status == 'approved') ||
+           (resource.data.status == 'paid' && request.resource.data.status == 'verified' && request.resource.data.paymentStatus == 'verified') ||
+           (resource.data.status == 'verified' && request.resource.data.status == 'completed' && (request.resource.data.proofConfidenceScore >= 50 || request.resource.data.proofSubmitted == false)) || // Simplified check for rules
+           (request.resource.data.status == 'cancelled') ||
            (request.resource.data.status == resource.data.status)
         ))
       );

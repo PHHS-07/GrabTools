@@ -38,6 +38,13 @@ class Tool {
   final int bookingCount;
   final double ratingScore;
 
+  // New Trust & Stabilization Fields
+  final double aiConfidenceScore;
+  final int totalBookings;
+  final DateTime? lastRentedAt;
+  final String requiredProofLevel; // none, selfie, selfie_code, video
+  final int demandScore;
+
   Tool({
     required this.id,
     required this.ownerId,
@@ -62,6 +69,11 @@ class Tool {
     this.ownerTrustScore = 0.0,
     this.bookingCount = 0,
     this.ratingScore = 0.0,
+    this.aiConfidenceScore = 100.0,
+    this.totalBookings = 0,
+    this.lastRentedAt,
+    this.requiredProofLevel = 'none',
+    this.demandScore = 0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -87,6 +99,11 @@ class Tool {
         'ownerTrustScore': ownerTrustScore,
         'bookingCount': bookingCount,
         'ratingScore': ratingScore,
+        'aiConfidenceScore': aiConfidenceScore,
+        'totalBookings': totalBookings,
+        'lastRentedAt': lastRentedAt?.toUtc(),
+        'requiredProofLevel': requiredProofLevel,
+        'demandScore': demandScore,
       };
 
   factory Tool.fromMap(String id, Map<String, dynamic> map) => Tool(
@@ -119,5 +136,14 @@ class Tool {
         ownerTrustScore: (map['ownerTrustScore'] as num?)?.toDouble() ?? 0.0,
         bookingCount: (map['bookingCount'] as num?)?.toInt() ?? 0,
         ratingScore: (map['ratingScore'] as num?)?.toDouble() ?? 0.0,
+        aiConfidenceScore: (map['aiConfidenceScore'] as num?)?.toDouble() ?? 100.0,
+        totalBookings: (map['totalBookings'] as num?)?.toInt() ?? 0,
+        lastRentedAt: map['lastRentedAt'] == null
+            ? null
+            : (map['lastRentedAt'] is DateTime
+                ? map['lastRentedAt'] as DateTime
+                : (map['lastRentedAt'] as dynamic).toDate() as DateTime),
+        requiredProofLevel: map['requiredProofLevel'] as String? ?? 'none',
+        demandScore: (map['demandScore'] as num?)?.toInt() ?? 0,
       );
 }

@@ -505,52 +505,114 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
           trailing: Builder(
             builder: (context) {
-              if (isLender && (_canReviewBooking(booking) || _hasPendingActionRequest(booking))) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: () async {
-                        if (_canReviewBooking(booking)) {
-                          await BookingsService().updateBookingStatus(booking.id, 'approved');
-                        } else {
+              if (isLender) {
+                if (booking.status == 'requested') {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check, color: Colors.green),
+                        onPressed: () async => await BookingsService().updateBookingStatus(booking.id, 'approved'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () async => await BookingsService().updateBookingStatus(booking.id, 'rejected'),
+                      ),
+                    ],
+                  );
+                } else if (booking.status == 'paid') {
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                    onPressed: () async {
+                      await BookingsService().verifyPayment(booking.id);
+                      await BookingsService().updateBookingStatus(booking.id, 'verified');
+                      await BookingsService().generateVerificationCode(booking.id);
+                    },
+                    child: const Text('Verify Payment'),
+                  );
+                } else if (booking.status == 'verified' && booking.proofSubmitted) {
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                    onPressed: () async {
+                      if (booking.proofConfidenceScore < 50) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Warning: Proof confidence is low.')));
+                      }
+                      await BookingsService().updateBookingStatus(booking.id, 'completed');
+                    },
+                    child: const Text('Complete Booking'),
+                  );
+                }
+              } else {
+                // Renter actions
+                if (booking.status == 'approved') {
+                  final expiry = booking.createdAt?.add(const Duration(hours: 24)) ?? DateTime.now();
+                  final hoursLeft = expiry.difference(DateTime.now()).inHours;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Expires in ${hoursLeft > 0 ? hoursLeft : 0}h', style: const TextStyle(color: Colors.red, fontSize: 12)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                        onPressed: () async {
+                          // Dummy payment proof upload for now
+                          await BookingsService().submitPaymentProof(booking.id, 'dummy_payment_receipt_url');
+                          await BookingsService().updateBookingStatus(booking.id, 'paid');
+                        },
+                        child: const Text('Pay Now'),
+                      ),
+                    ],
+                  );
+                } else if (booking.status == 'verified' && !booking.proofSubmitted) {
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
+                    onPressed: () async {
+                      // Challenge Flow: Upload Proof
+                      await BookingsService().submitPickupProof(
+                        id: booking.id,
+                        imageUrl: 'dummy_camera_capture_url',
+                        location: {'lat': 0, 'lng': 0},
+                        type: 'selfie_code',
+                        expectedCode: booking.verificationCode ?? '',
+                        actualCode: booking.verificationCode ?? '', // Assume match for testing
+                        isLiveCapture: true,
+                        aiToolMatch: true,
+                        gpsMatch: true,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proof Submitted Successfully.')));
+                    },
+                    child: const Text('Upload Proof'),
+                  );
+                }
+              }
+              
+              if (isLender && _hasPendingActionRequest(booking)) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check, color: Colors.green),
+                        onPressed: () async {
                           if (_isPendingReturnRequest(booking)) {
                             final paymentReceived = await _confirmReturnPaymentReceived(booking);
-                            if (!mounted || !paymentReceived) return;
+                            if (!context.mounted || !paymentReceived) return;
                           }
                           await BookingsService().resolvePendingAction(
                             id: booking.id,
                             approve: true,
                           );
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () async {
-                        if (_canReviewBooking(booking)) {
-                          await BookingsService().updateBookingStatus(booking.id, 'rejected');
-                        } else {
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () async {
                           await BookingsService().resolvePendingAction(
                             id: booking.id,
                             approve: false,
                           );
-                        }
-                      },
-                    ),
-                  ],
-                );
-              } else if (!isLender && booking.status.toLowerCase() == 'approved') {
-                return ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-                  onPressed: () async {
-                    await BookingsService().updateBookingStatus(booking.id, 'confirmed');
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Confirmed! Dates reserved in calendar.')));
-                  },
-                  child: const Text('Confirm Payment'),
-                );
+                        },
+                      ),
+                    ],
+                  );
               }
               return const SizedBox.shrink();
             },

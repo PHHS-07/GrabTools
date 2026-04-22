@@ -179,6 +179,33 @@ class ToolDetailsScreen extends StatelessWidget {
                       ],
                     ),
                   ],
+                  if (t.demandScore > 10) ...[
+                    const SizedBox(height: 4),
+                    const Row(
+                      children: [
+                        Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
+                        SizedBox(width: 4),
+                        Text('🔥 High Demand', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 13)),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: t.aiConfidenceScore >= 80 ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: t.aiConfidenceScore >= 80 ? Colors.green : Colors.orange),
+                    ),
+                    child: Text(
+                      'AI Confidence: ${t.aiConfidenceScore.toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: t.aiConfidenceScore >= 80 ? Colors.green : Colors.deepOrange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -236,6 +263,19 @@ class ToolDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(t.termsAndConditions!),
                   ],
+                  const SizedBox(height: 12),
+                  const Text('Security Requirements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.shield, size: 16, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Proof required at pickup: ${t.requiredProofLevel.toUpperCase()}',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [

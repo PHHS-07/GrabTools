@@ -79,12 +79,39 @@ class BookingsService {
        }
     });
 
-    // If booking completed, credit lender earnings
+    // If booking completed, credit lender earnings and update stats
     if (status == 'completed') {
       final lenderId = data['lenderId'] as String?;
+      final renterId = data['renterId'] as String?;
+      final toolId = data['toolId'] as String?;
       final totalPrice = (data['totalPrice'] as num?)?.toDouble() ?? 0.0;
       if (lenderId != null && totalPrice > 0) {
-        await FirebaseFirestore.instance.collection('users').doc(lenderId).set({'earnings': FieldValue.increment(totalPrice)}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(lenderId).set({
+          'earnings': FieldValue.increment(totalPrice),
+          'totalBookings': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+      }
+      if (renterId != null) {
+        await FirebaseFirestore.instance.collection('users').doc(renterId).set({
+          'totalBookings': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+      }
+      if (toolId != null) {
+        await FirebaseFirestore.instance.collection('tools').doc(toolId).set({
+          'totalBookings': FieldValue.increment(1),
+          'lastRentedAt': DateTime.now().toUtc(),
+        }, SetOptions(merge: true));
+      }
+    }
+
+    if (status == 'cancelled') {
+      final renterId = data['renterId'] as String?;
+      if (renterId != null) {
+        await FirebaseFirestore.instance.collection('users').doc(renterId).set({
+          'totalCancellations': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+        // Need to update cancellationRate asynchronously via cloud function or rule, 
+        // or we do it carefully on the client. For now, incrementing cancellations.
       }
     }
   }
@@ -105,6 +132,57 @@ class BookingsService {
       'paymentStatus': paymentStatus,
       'paymentMethod': paymentMethod,
       'paymentReference': paymentReference,
+    });
+  }
+
+  Future<void> submitPaymentProof(String id, String imageUrl) async {
+    await bookings.doc(id).update({
+      'paymentProofUrl': imageUrl,
+      'paymentStatus': 'paid',
+      'updatedAt': DateTime.now().toUtc(),
+    });
+  }
+
+  Future<void> verifyPayment(String id) async {
+    await bookings.doc(id).update({
+      'paymentStatus': 'verified',
+      'updatedAt': DateTime.now().toUtc(),
+    });
+  }
+
+  Future<void> generateVerificationCode(String id) async {
+    final code = 'GT-${(1000 + DateTime.now().millisecondsSinceEpoch % 9000).toString()}';
+    await bookings.doc(id).update({
+      'verificationCode': code,
+      'verificationGeneratedAt': DateTime.now().toUtc(),
+    });
+  }
+
+  Future<void> submitPickupProof({
+    required String id,
+    required String imageUrl,
+    required Map<String, dynamic> location,
+    required String type,
+    required String expectedCode,
+    required String actualCode,
+    required bool isLiveCapture,
+    required bool aiToolMatch,
+    required bool gpsMatch,
+  }) async {
+    double score = 0;
+    if (isLiveCapture) score += 40;
+    if (gpsMatch) score += 20;
+    if (aiToolMatch) score += 20;
+    if (expectedCode.isNotEmpty && expectedCode == actualCode) score += 20;
+
+    await bookings.doc(id).update({
+      'proofUrl': imageUrl,
+      'proofType': type,
+      'proofSubmitted': true,
+      'proofConfidenceScore': score,
+      'pickupTimestamp': DateTime.now().toUtc(),
+      'pickupLocation': location,
+      'updatedAt': DateTime.now().toUtc(),
     });
   }
 

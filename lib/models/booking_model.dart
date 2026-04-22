@@ -7,9 +7,9 @@ class Booking {
   final String lenderId;
   final DateTime startDate;
   final DateTime endDate;
-  final String status; // requested, approved, confirmed, in_progress, completed, cancelled, expired, rejected
+  final String status; // requested, approved, paid, verified, completed, cancelled, expired
   final double totalPrice;
-  final String paymentStatus; // unpaid, pending_verification
+  final String paymentStatus; // pending, paid, verified
   final String? paymentMethod;
   final String? paymentReference;
   final String? pendingActionType; // extend, return
@@ -19,6 +19,17 @@ class Booking {
   final double? requestedTotalPrice;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  // New Trust & Stabilization Fields
+  final String? paymentProofUrl;
+  final String? proofType; // none, selfie, selfie_code, video
+  final String? proofUrl;
+  final bool proofSubmitted;
+  final String? verificationCode;
+  final DateTime? verificationGeneratedAt;
+  final double proofConfidenceScore;
+  final DateTime? pickupTimestamp;
+  final Map<String, dynamic>? pickupLocation; // {lat, lng}
 
   Booking({
     required this.id,
@@ -31,7 +42,7 @@ class Booking {
     required this.endDate,
     required this.status,
     required this.totalPrice,
-    this.paymentStatus = 'unpaid',
+    this.paymentStatus = 'pending',
     this.paymentMethod,
     this.paymentReference,
     this.pendingActionType,
@@ -41,6 +52,15 @@ class Booking {
     this.requestedTotalPrice,
     this.createdAt,
     this.updatedAt,
+    this.paymentProofUrl,
+    this.proofType,
+    this.proofUrl,
+    this.proofSubmitted = false,
+    this.verificationCode,
+    this.verificationGeneratedAt,
+    this.proofConfidenceScore = 0.0,
+    this.pickupTimestamp,
+    this.pickupLocation,
   });
 
   String get displayBookingId =>
@@ -66,6 +86,15 @@ class Booking {
         'requestedTotalPrice': requestedTotalPrice,
         'createdAt': createdAt?.toUtc(),
         'updatedAt': updatedAt?.toUtc(),
+        'paymentProofUrl': paymentProofUrl,
+        'proofType': proofType,
+        'proofUrl': proofUrl,
+        'proofSubmitted': proofSubmitted,
+        'verificationCode': verificationCode,
+        'verificationGeneratedAt': verificationGeneratedAt?.toUtc(),
+        'proofConfidenceScore': proofConfidenceScore,
+        'pickupTimestamp': pickupTimestamp?.toUtc(),
+        'pickupLocation': pickupLocation,
       };
 
   factory Booking.fromMap(String id, Map<String, dynamic> map) => Booking(
@@ -83,7 +112,7 @@ class Booking {
             : (map['endDate'] as dynamic).toDate() as DateTime,
         status: map['status'] as String,
         totalPrice: (map['totalPrice'] as num).toDouble(),
-        paymentStatus: map['paymentStatus'] as String? ?? 'unpaid',
+        paymentStatus: map['paymentStatus'] as String? ?? 'pending',
         paymentMethod: map['paymentMethod'] as String?,
         paymentReference: map['paymentReference'] as String?,
         pendingActionType: map['pendingActionType'] as String?,
@@ -101,5 +130,18 @@ class Booking {
         updatedAt: map['updatedAt'] != null
             ? (map['updatedAt'] is DateTime ? map['updatedAt'] as DateTime : (map['updatedAt'] as dynamic).toDate() as DateTime)
             : null,
+        paymentProofUrl: map['paymentProofUrl'] as String?,
+        proofType: map['proofType'] as String?,
+        proofUrl: map['proofUrl'] as String?,
+        proofSubmitted: map['proofSubmitted'] as bool? ?? false,
+        verificationCode: map['verificationCode'] as String?,
+        verificationGeneratedAt: map['verificationGeneratedAt'] != null
+            ? (map['verificationGeneratedAt'] is DateTime ? map['verificationGeneratedAt'] as DateTime : (map['verificationGeneratedAt'] as dynamic).toDate() as DateTime)
+            : null,
+        proofConfidenceScore: (map['proofConfidenceScore'] as num?)?.toDouble() ?? 0.0,
+        pickupTimestamp: map['pickupTimestamp'] != null
+            ? (map['pickupTimestamp'] is DateTime ? map['pickupTimestamp'] as DateTime : (map['pickupTimestamp'] as dynamic).toDate() as DateTime)
+            : null,
+        pickupLocation: map['pickupLocation'] as Map<String, dynamic>?,
       );
 }

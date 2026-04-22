@@ -77,6 +77,38 @@ class AuthProvider extends ChangeNotifier {
   Future<void> login(String email, String password) async {
     _skipLocalUnlockOnce = true;
     await _service.login(email, password);
+    final u = _service.currentUser;
+    if (u != null) {
+      final deviceId = await _usersService.getDeviceId();
+      final currentProfile = await _usersService.getUser(u.uid);
+      if (currentProfile != null) {
+        final updated = AppUser(
+          id: currentProfile.id,
+          email: currentProfile.email,
+          role: currentProfile.role,
+          createdAt: currentProfile.createdAt,
+          displayName: currentProfile.displayName,
+          photoUrl: currentProfile.photoUrl,
+          username: currentProfile.username,
+          phoneNumber: currentProfile.phoneNumber,
+          gender: currentProfile.gender,
+          upiId: currentProfile.upiId,
+          paymentMode: currentProfile.paymentMode,
+          earnings: currentProfile.earnings,
+          trustScore: currentProfile.trustScore,
+          deviceId: deviceId,
+          lastLoginAt: DateTime.now(),
+          verificationLevel: currentProfile.verificationLevel,
+          idDocumentUrl: currentProfile.idDocumentUrl,
+          cancellationRate: currentProfile.cancellationRate,
+          totalBookings: currentProfile.totalBookings,
+          totalCancellations: currentProfile.totalCancellations,
+          isSuspicious: currentProfile.isSuspicious,
+        );
+        await _usersService.createOrUpdateUser(updated);
+        _profile = updated;
+      }
+    }
   }
 
   Future<void> register(
@@ -92,6 +124,17 @@ class AuthProvider extends ChangeNotifier {
     final credential = await _service.register(email, password);
     final u = credential.user;
     if (u != null) {
+      final deviceId = await _usersService.getDeviceId();
+      final deviceUsersCount = await _usersService.countUsersOnDevice(deviceId);
+      
+      bool isSuspicious = false;
+      int initialTrustScore = 50;
+
+      if (deviceUsersCount >= 2) {
+        isSuspicious = true;
+        initialTrustScore = 20; // Penalty
+      }
+
       final appUser = AppUser(
         id: u.uid,
         email: email,
@@ -101,6 +144,10 @@ class AuthProvider extends ChangeNotifier {
         phoneNumber: phoneNumber,
         gender: gender,
         upiId: upiId,
+        deviceId: deviceId,
+        lastLoginAt: DateTime.now(),
+        trustScore: initialTrustScore,
+        isSuspicious: isSuspicious,
       );
       await _usersService.createOrUpdateUser(appUser);
       _user = _service.currentUser;
