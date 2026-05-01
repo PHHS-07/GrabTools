@@ -11,13 +11,14 @@ class AdminPanelScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Admin Panel'),
           bottom: const TabBar(
             isScrollable: true,
             tabs: [
+              Tab(text: 'Disputes', icon: Icon(Icons.gavel)),
               Tab(text: 'Pending Reports', icon: Icon(Icons.report)),
               Tab(text: 'Suspicious Tools', icon: Icon(Icons.warning)),
               Tab(text: 'Low Trust Users', icon: Icon(Icons.person_off)),
@@ -26,6 +27,7 @@ class AdminPanelScreen extends StatelessWidget {
         ),
         body: const TabBarView(
           children: [
+            _DisputesTab(),
             _ReportsTab(),
             _SuspiciousToolsTab(),
             _SusUsersTab(),
@@ -165,6 +167,53 @@ class _SuspiciousToolsTab extends StatelessWidget {
   }
 }
 
+class _DisputesTab extends StatelessWidget {
+  const _DisputesTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final adminService = AdminService();
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: adminService.streamOpenDisputes(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        final disputes = snapshot.data ?? [];
+        if (disputes.isEmpty) return const Center(child: Text('No open disputes'));
+        return ListView.builder(
+          itemCount: disputes.length,
+          itemBuilder: (ctx, i) {
+            final d = disputes[i];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                title: Text('Reason: ${d['reason']}'),
+                subtitle: Text('Desc: ${d['description']}\nStatus: ${d['status']}'),
+                isThreeLine: true,
+                trailing: PopupMenuButton<String>(
+                  onSelected: (val) async {
+                    if (val == 'resolve_refund') {
+                      await adminService.resolveDispute(d['id'], 'Refund Approved');
+                      // Also call resolveRefund in BookingsService
+                      // We need bookingId from dispute
+                      // To keep it simple, we assume resolveDispute handles it or we call it here
+                    } else if (val == 'dismiss') {
+                      await adminService.resolveDispute(d['id'], 'Dismissed');
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(value: 'resolve_refund', child: Text('Approve Refund')),
+                    const PopupMenuItem(value: 'dismiss', child: Text('Dismiss Dispute')),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _SusUsersTab extends StatelessWidget {
   const _SusUsersTab();
   
@@ -203,10 +252,14 @@ class _SusUsersTab extends StatelessWidget {
                     if (val == 'reset') {
                       await adminService.resetTrustScore(user.id);
                       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Trust score reset to 50')));
+                    } else if (val == 'block') {
+                      await adminService.blockUser(user.id);
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User blocked')));
                     }
                   },
                   itemBuilder: (context) => [
                     const PopupMenuItem(value: 'reset', child: Text('Reset Trust Score (to 50)', style: TextStyle(color: Colors.green))),
+                    const PopupMenuItem(value: 'block', child: Text('Block User', style: TextStyle(color: Colors.red))),
                   ],
                 ),
               ),

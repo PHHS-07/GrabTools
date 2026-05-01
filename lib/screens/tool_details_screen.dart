@@ -190,6 +190,43 @@ class ToolDetailsScreen extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (t.ratingScore > 0)
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 18),
+                            Text(
+                              ' ${t.ratingScore.toStringAsFixed(1)} (${t.totalReviews})',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                        ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: t.ownerTrustScore >= 80 ? Colors.blue.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: t.ownerTrustScore >= 80 ? Colors.blue : Colors.grey),
+                        ),
+                        child: Row(
+                          children: [
+                            if (t.ownerTrustScore >= 80) const Icon(Icons.verified, color: Colors.blue, size: 14),
+                            Text(
+                              ' Trust: ${t.ownerTrustScore.toInt()}',
+                              style: TextStyle(
+                                color: t.ownerTrustScore >= 80 ? Colors.blue : Colors.grey[700],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(

@@ -1037,7 +1037,36 @@ class BookingDetailsScreen extends StatelessWidget {
                       : 'Requested Total Price',
                   value: formatMoney(booking.requestedTotalPrice!),
                 ),
-              const SizedBox(height: 8),
+              if (booking.refundStatus != 'none')
+                _DetailRow(
+                  label: 'Refund Status',
+                  value: booking.refundStatus.toUpperCase(),
+                ),
+              const SizedBox(height: 16),
+              if (booking.status.toLowerCase() == 'completed' || booking.status.toLowerCase() == 'confirmed')
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showReportIssueDialog(context),
+                        icon: const Icon(Icons.report_problem),
+                        label: const Text('Report Issue'),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                      ),
+                    ),
+                    if (!isLender && booking.refundStatus == 'none') ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showRefundRequestDialog(context),
+                          icon: const Icon(Icons.undo),
+                          label: const Text('Request Refund'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              const SizedBox(height: 16),
               const Text(
                 'Ratings',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
@@ -1082,6 +1111,63 @@ class BookingDetailsScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _showReportIssueDialog(BuildContext context) {
+    final reasonCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Report Issue / Dispute'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: reasonCtrl, decoration: const InputDecoration(labelText: 'Reason (e.g. Tool Broken)')),
+            TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description'), maxLines: 3),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              await BookingsService().createDispute(
+                bookingId: booking.id,
+                raisedBy: auth.user!.uid,
+                reason: reasonCtrl.text,
+                description: descCtrl.text,
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute raised successfully')));
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRefundRequestDialog(BuildContext context) {
+    final reasonCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Request Refund'),
+        content: TextField(controller: reasonCtrl, decoration: const InputDecoration(labelText: 'Reason for Refund'), maxLines: 2),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await BookingsService().requestRefund(booking.id, reasonCtrl.text);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Refund requested')));
+            },
+            child: const Text('Submit'),
+          ),
+        ],
       ),
     );
   }

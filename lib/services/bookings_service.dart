@@ -320,4 +320,71 @@ class BookingsService {
           return overlap;
         });
   }
+
+  // --- New Dispute & Refund Features ---
+
+  Future<void> createDispute({
+    required String bookingId,
+    required String raisedBy,
+    required String reason,
+    required String description,
+    List<String> evidenceUrls = const [],
+  }) async {
+    final disputeRef = FirebaseFirestore.instance.collection('disputes').doc();
+    final now = DateTime.now().toUtc();
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      transaction.set(disputeRef, {
+        'bookingId': bookingId,
+        'raisedBy': raisedBy,
+        'reason': reason,
+        'description': description,
+        'evidenceUrls': evidenceUrls,
+        'status': 'open',
+        'resolution': 'none',
+        'createdAt': now,
+      });
+
+      transaction.update(bookings.doc(bookingId), {
+        'disputeId': disputeRef.id,
+        'updatedAt': now,
+      });
+    });
+  }
+
+  Future<void> requestRefund(String bookingId, String reason) async {
+    await bookings.doc(bookingId).update({
+      'refundStatus': 'requested',
+      'refundReason': reason,
+      'updatedAt': DateTime.now().toUtc(),
+    });
+  }
+
+  Future<void> resolveRefund(String bookingId, String status) async {
+    final docRef = bookings.doc(bookingId);
+    
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) return;
+      final booking = _mapBooking(snapshot);
+
+      transaction.update(docRef, {
+        'refundStatus': status,
+        'updatedAt': DateTime.now().toUtc(),
+      });
+
+      if (status == 'approved') {
+        // If approved, we need to deduct earnings from the lender
+        final lenderId = booking.lenderId;
+        final amountToRefund = booking.totalPrice;
+        
+        transaction.update(FirebaseFirestore.instance.collection('users').doc(lenderId), {
+          'earnings': FieldValue.increment(-amountToRefund),
+        });
+        
+        // Mark booking as cancelled or similar if needed? 
+        // For now, just setting refundStatus is enough as per requirement.
+      }
+    });
+  }
 }

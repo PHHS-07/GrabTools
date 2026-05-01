@@ -85,7 +85,22 @@ class _ToolListScreenState extends State<ToolListScreen> {
                                   child: Image.network(t.imageUrls.first, width: 56, height: 56, fit: BoxFit.cover),
                                 )
                               : const Icon(Icons.build),
-                          title: Text(t.title),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: Text(t.title, overflow: TextOverflow.ellipsis)),
+                              if (t.ratingScore > 0)
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                                    Text(
+                                      ' ${t.ratingScore.toStringAsFixed(1)} (${t.totalReviews})',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

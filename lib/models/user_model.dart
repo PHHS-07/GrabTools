@@ -22,6 +22,8 @@ class AppUser {
   final int totalBookings;
   final int totalCancellations;
   final bool isSuspicious;
+  final double averageRating;
+  final int totalReviews;
 
   AppUser({
     required this.id,
@@ -45,6 +47,8 @@ class AppUser {
     this.totalBookings = 0,
     this.totalCancellations = 0,
     this.isSuspicious = false,
+    this.averageRating = 0.0,
+    this.totalReviews = 0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -69,6 +73,8 @@ class AppUser {
         'totalBookings': totalBookings,
         'totalCancellations': totalCancellations,
         'isSuspicious': isSuspicious,
+        'averageRating': averageRating,
+        'totalReviews': totalReviews,
       };
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) => AppUser(
@@ -101,5 +107,7 @@ class AppUser {
         totalBookings: (map['totalBookings'] as num?)?.toInt() ?? 0,
         totalCancellations: (map['totalCancellations'] as num?)?.toInt() ?? 0,
         isSuspicious: map['isSuspicious'] as bool? ?? false,
+        averageRating: (map['averageRating'] as num?)?.toDouble() ?? 0.0,
+        totalReviews: (map['totalReviews'] as num?)?.toInt() ?? 0,
       );
 }

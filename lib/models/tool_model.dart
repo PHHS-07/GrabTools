@@ -44,6 +44,7 @@ class Tool {
   final DateTime? lastRentedAt;
   final String requiredProofLevel; // none, selfie, selfie_code, video
   final int demandScore;
+  final int totalReviews;
 
   Tool({
     required this.id,
@@ -74,6 +75,7 @@ class Tool {
     this.lastRentedAt,
     this.requiredProofLevel = 'none',
     this.demandScore = 0,
+    this.totalReviews = 0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -104,6 +106,7 @@ class Tool {
         'lastRentedAt': lastRentedAt?.toUtc(),
         'requiredProofLevel': requiredProofLevel,
         'demandScore': demandScore,
+        'totalReviews': totalReviews,
       };
 
   factory Tool.fromMap(String id, Map<String, dynamic> map) => Tool(
@@ -145,5 +148,6 @@ class Tool {
                 : (map['lastRentedAt'] as dynamic).toDate() as DateTime),
         requiredProofLevel: map['requiredProofLevel'] as String? ?? 'none',
         demandScore: (map['demandScore'] as num?)?.toInt() ?? 0,
+        totalReviews: (map['totalReviews'] as num?)?.toInt() ?? 0,
       );
 }

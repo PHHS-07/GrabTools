@@ -30,6 +30,9 @@ class Booking {
   final double proofConfidenceScore;
   final DateTime? pickupTimestamp;
   final Map<String, dynamic>? pickupLocation; // {lat, lng}
+  final String? disputeId;
+  final String refundStatus; // none, requested, approved, rejected
+  final String? refundReason;
 
   Booking({
     required this.id,
@@ -61,6 +64,9 @@ class Booking {
     this.proofConfidenceScore = 0.0,
     this.pickupTimestamp,
     this.pickupLocation,
+    this.disputeId,
+    this.refundStatus = 'none',
+    this.refundReason,
   });
 
   String get displayBookingId =>
@@ -95,6 +101,9 @@ class Booking {
         'proofConfidenceScore': proofConfidenceScore,
         'pickupTimestamp': pickupTimestamp?.toUtc(),
         'pickupLocation': pickupLocation,
+        'disputeId': disputeId,
+        'refundStatus': refundStatus,
+        'refundReason': refundReason,
       };
 
   factory Booking.fromMap(String id, Map<String, dynamic> map) => Booking(
@@ -143,5 +152,8 @@ class Booking {
             ? (map['pickupTimestamp'] is DateTime ? map['pickupTimestamp'] as DateTime : (map['pickupTimestamp'] as dynamic).toDate() as DateTime)
             : null,
         pickupLocation: map['pickupLocation'] as Map<String, dynamic>?,
+        disputeId: map['disputeId'] as String?,
+        refundStatus: map['refundStatus'] as String? ?? 'none',
+        refundReason: map['refundReason'] as String?,
       );
 }

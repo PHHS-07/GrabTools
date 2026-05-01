@@ -44,24 +44,49 @@ service cloud.firestore {
         (request.auth.uid == resource.data.renterId && (
            (resource.data.status == 'approved' && request.resource.data.status == 'paid' && request.resource.data.paymentStatus == 'paid') ||
            (request.resource.data.status == 'cancelled') ||
-           (request.resource.data.status == resource.data.status) // metadata updates (like proof fields)
+           (request.resource.data.status == resource.data.status && (
+             (request.resource.data.refundStatus == 'requested' && resource.data.refundStatus == 'none') ||
+             (request.resource.data.refundStatus == resource.data.refundStatus)
+           ))
         )) ||
         (request.auth.uid == resource.data.lenderId && (
            (resource.data.status == 'requested' && request.resource.data.status == 'approved') ||
            (resource.data.status == 'paid' && request.resource.data.status == 'verified' && request.resource.data.paymentStatus == 'verified') ||
-           (resource.data.status == 'verified' && request.resource.data.status == 'completed' && (request.resource.data.proofConfidenceScore >= 50 || request.resource.data.proofSubmitted == false)) || // Simplified check for rules
+           (resource.data.status == 'verified' && request.resource.data.status == 'completed' && (request.resource.data.proofConfidenceScore >= 50 || request.resource.data.proofSubmitted == false)) ||
            (request.resource.data.status == 'cancelled') ||
-           (request.resource.data.status == resource.data.status)
+           (request.resource.data.status == resource.data.status && (
+             (request.resource.data.refundStatus == 'approved' && resource.data.refundStatus == 'requested') ||
+             (request.resource.data.refundStatus == 'rejected' && resource.data.refundStatus == 'requested') ||
+             (request.resource.data.refundStatus == resource.data.refundStatus)
+           ))
         ))
       );
       allow delete: if isAdmin();
     }
 
-    // Reviews - any authenticated user who rented can write (enforced in app), anyone can read
+    // Disputes
+    match /disputes/{disputeId} {
+      allow read: if request.auth != null && (
+        isAdmin() || 
+        request.auth.uid == resource.data.raisedBy ||
+        request.auth.uid == get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.lenderId
+      );
+      allow create: if request.auth != null && (
+        request.auth.uid == request.resource.data.raisedBy &&
+        (request.auth.uid == get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.renterId ||
+         request.auth.uid == get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.lenderId)
+      );
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Reviews - only allowed after completed booking
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+                    request.resource.data.reviewerId == request.auth.uid &&
+                    get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.status == 'completed';
+      allow delete: if isAdmin() || request.auth.uid == resource.data.reviewerId;
     }
 
     // Ratings - any authenticated user can read and create their own rating

@@ -64,4 +64,28 @@ class AdminService {
   Future<void> resetTrustScore(String userId) async {
     await _db.collection('users').doc(userId).update({'trustScore': 50});
   }
+
+  Stream<List<Map<String, dynamic>>> streamOpenDisputes() {
+    return _db
+        .collection('disputes')
+        .where('status', isNotEqualTo: 'resolved')
+        .snapshots()
+        .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  Future<void> resolveDispute(String disputeId, String resolution) async {
+    await _db.collection('disputes').doc(disputeId).update({
+      'status': 'resolved',
+      'resolution': resolution,
+      'updatedAt': DateTime.now().toUtc(),
+    });
+  }
+
+  Future<void> blockUser(String userId) async {
+    await _db.collection('users').doc(userId).update({
+      'isSuspicious': true,
+      'trustScore': 0,
+      'role': 'user', // Ensure they aren't admin if blocked
+    });
+  }
 }
