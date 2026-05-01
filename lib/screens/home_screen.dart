@@ -59,7 +59,6 @@ class HomeScreen extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final profile = auth.profile;
-    final user = auth.user;
 
     if (profile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));

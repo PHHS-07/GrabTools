@@ -74,7 +74,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
         _selectedConditionStatus = t.conditionStatus.isEmpty ? null : t.conditionStatus;
         imageUrls = List.from(t.imageUrls);
         imagePaths = List.from(t.imageStoragePaths);
-        addressCtrl.text = t.address;
+        addressCtrl.text = t.address ?? '';
         _selectedLocation = t.location;
       }
       setState(() => _loading = false);
