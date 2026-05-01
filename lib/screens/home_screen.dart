@@ -61,7 +61,7 @@ class HomeScreen extends StatelessWidget {
     final profile = auth.profile;
     final user = auth.user;
 
-    if (user == null || profile == null) {
+    if (profile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

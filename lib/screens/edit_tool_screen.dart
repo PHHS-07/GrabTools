@@ -8,6 +8,7 @@ import '../services/storage_service.dart';
 import '../services/vision_service.dart';
 import '../config/app_config.dart';
 import '../widgets/app_alerts.dart';
+import 'location_picker_screen.dart';
 
 class EditToolScreen extends StatefulWidget {
   final String toolId;
@@ -23,6 +24,8 @@ class _EditToolScreenState extends State<EditToolScreen> {
   final descCtrl = TextEditingController();
   final priceCtrl = TextEditingController();
   final categoriesCtrl = TextEditingController();
+  final addressCtrl = TextEditingController();
+  Map<String, dynamic>? _selectedLocation;
   static const List<String> _conditionOptions = [
     'Excellent',
     'Good',
@@ -71,6 +74,8 @@ class _EditToolScreenState extends State<EditToolScreen> {
         _selectedConditionStatus = t.conditionStatus.isEmpty ? null : t.conditionStatus;
         imageUrls = List.from(t.imageUrls);
         imagePaths = List.from(t.imageStoragePaths);
+        addressCtrl.text = t.address;
+        _selectedLocation = t.location;
       }
       setState(() => _loading = false);
     });
@@ -97,6 +102,24 @@ class _EditToolScreenState extends State<EditToolScreen> {
           _currentMaxPrice = newMax;
         });
       }
+    }
+  }
+
+  Future<void> _pickLocation() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerScreen(
+          initialAddress: addressCtrl.text,
+          initialLocation: _selectedLocation,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        addressCtrl.text = result['address'] as String? ?? '';
+        _selectedLocation = result['location'] as Map<String, dynamic>?;
+      });
     }
   }
 
@@ -161,8 +184,8 @@ class _EditToolScreenState extends State<EditToolScreen> {
       imageUrls: imageUrls,
       imageStoragePaths: imagePaths,
       categories: categoriesCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
-      location: _tool.location,
-      address: _tool.address,
+      location: _selectedLocation,
+      address: addressCtrl.text,
       conditionStatus: _selectedConditionStatus ?? '',
       termsAndConditions: _selectedTcOption == _tcNone ? null : _selectedTcOption,
       available: _tool.available,
@@ -262,6 +285,20 @@ class _EditToolScreenState extends State<EditToolScreen> {
                 validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               ),
             ),
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: TextFormField(
+                controller: addressCtrl,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Location',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  suffixIcon: Icon(Icons.location_on),
+                ),
+                onTap: _pickLocation,
+                validator: (v) => v == null || v.isEmpty ? 'Location required' : null,
+              ),
+            ),
             const Text('Terms and Conditions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
             const SizedBox(height: 4),
             Container(
@@ -352,6 +389,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
     descCtrl.dispose();
     priceCtrl.dispose();
     categoriesCtrl.dispose();
+    addressCtrl.dispose();
     super.dispose();
   }
 }

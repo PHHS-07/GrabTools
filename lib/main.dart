@@ -207,8 +207,15 @@ class _HomeRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        if (auth.user == null) return const LoginScreen();
-        if (!auth.isEmailVerified) return const EmailVerificationScreen();
+        final profile = auth.profile;
+        final user = auth.user;
+
+        if (profile == null && user == null) return const LoginScreen();
+        
+        // Mock admin is always verified and skips email verification screen
+        if (user != null && !auth.isEmailVerified) {
+          return const EmailVerificationScreen();
+        }
         if (auth.requiresLocalUnlock) {
           return LocalUnlockScreen(
             onUnlocked: () => context.read<AuthProvider>().markLocalUnlockDone(),

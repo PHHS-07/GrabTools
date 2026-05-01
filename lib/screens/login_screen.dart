@@ -203,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _showScreenError('Please enter email and password');
       return;
     }
-    if (!_emailRegex.hasMatch(emailValue)) {
+    if (emailValue != 'admin' && !_emailRegex.hasMatch(emailValue)) {
       _showScreenError('Enter a valid email address');
       return;
     }
