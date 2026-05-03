@@ -78,59 +78,15 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     final cleanEmail = email.trim();
-    if (cleanEmail == 'admin' && password == 'admin@GT') {
-      _isMockAdmin = true;
-      _profile = AppUser(
-        id: 'ADMIN_OVERRIDE',
-        email: 'admin@grabtools.platform',
-        role: 'admin',
-        username: 'admin',
-        displayName: 'Platform Admin',
-        trustScore: 100,
-        verificationLevel: 3,
-        createdAt: DateTime(2024),
-      );
-      _user = null;
-      _requiresLocalUnlock = false;
-      notifyListeners();
-      return;
-    }
-
     _isMockAdmin = false;
     _skipLocalUnlockOnce = true;
+    
+    // Perform Firebase Login
     await _service.login(cleanEmail, password);
-    final u = _service.currentUser;
-    if (u != null) {
-      final deviceId = await _usersService.getDeviceId();
-      final currentProfile = await _usersService.getUser(u.uid);
-      if (currentProfile != null) {
-        final updated = AppUser(
-          id: currentProfile.id,
-          email: currentProfile.email,
-          role: currentProfile.role,
-          createdAt: currentProfile.createdAt,
-          displayName: currentProfile.displayName,
-          photoUrl: currentProfile.photoUrl,
-          username: currentProfile.username,
-          phoneNumber: currentProfile.phoneNumber,
-          gender: currentProfile.gender,
-          upiId: currentProfile.upiId,
-          paymentMode: currentProfile.paymentMode,
-          earnings: currentProfile.earnings,
-          trustScore: currentProfile.trustScore,
-          deviceId: deviceId,
-          lastLoginAt: DateTime.now(),
-          verificationLevel: currentProfile.verificationLevel,
-          idDocumentUrl: currentProfile.idDocumentUrl,
-          cancellationRate: currentProfile.cancellationRate,
-          totalBookings: currentProfile.totalBookings,
-          totalCancellations: currentProfile.totalCancellations,
-          isSuspicious: currentProfile.isSuspicious,
-        );
-        await _usersService.createOrUpdateUser(updated);
-        _profile = updated;
-      }
-    }
+    
+    // The authChanges listener in the constructor will handle the profile fetching.
+    // We just need to make sure the UI knows we're done.
+    notifyListeners();
   }
 
   Future<void> register(

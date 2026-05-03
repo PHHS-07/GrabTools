@@ -1,8 +1,6 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../models/tool_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/ratings_service.dart';
@@ -127,91 +125,163 @@ class _ToolManagementScreenState extends State<ToolManagementScreen> {
           final tools = snap.data ?? [];
           if (tools.isEmpty) return const Center(child: Text('No tools yet'));
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: tools.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 10),
-            itemBuilder: (ctx, i) {
-              final t = tools[i];
-              return GestureDetector(
-                onLongPress: () => _showToolActions(t),
-                child: _LiquidGlassCard(
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    leading: t.imageUrls.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              t.imageUrls.first,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : const Icon(Icons.handyman, size: 28),
-                    title: Text(
-                      t.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+          final anySuspicious = tools.any((t) => t.isSuspicious);
+
+          return Column(
+            children: [
+              if (anySuspicious)
+                Container(
+                  width: double.infinity,
+                  color: Colors.orange.shade50,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Some of your tools are under review. They may be hidden from search results until verified by an admin.',
+                          style: TextStyle(color: Colors.orange.shade900, fontSize: 13, fontWeight: FontWeight.w500),
                         ),
-                        const SizedBox(height: 6),
-                        StreamBuilder(
-                          stream: RatingsService().streamRatingsByTool(t.id),
-                          builder: (context, ratingSnap) {
-                            if (!ratingSnap.hasData || ratingSnap.data!.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.star, color: Colors.amber, size: 14),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      '0.0/5 (0)',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-                            final ratings = ratingSnap.data!;
-                            final avgScore = ratings.fold(0.0, (s, r) => s + (r.toolRating ?? r.behavior)) / ratings.length;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.star, color: Colors.amber, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${avgScore.toStringAsFixed(1)}/5 (${ratings.length})',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        ToolAvailabilityBadge(tool: t, compact: true),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.currency_rupee, size: 16),
-                        Text('${t.pricePerDay.toStringAsFixed(0)}/day'),
-                      ],
-                    ),
-                    isThreeLine: true,
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: tools.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (ctx, i) {
+                    final t = tools[i];
+                    return GestureDetector(
+                      onLongPress: () => _showToolActions(t),
+                      child: _LiquidGlassCard(
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          leading: t.imageUrls.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    t.imageUrls.first,
+                                    width: 56,
+                                    height: 56,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : const Icon(Icons.handyman, size: 28),
+                          title: Text(
+                            t.title,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                t.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              StreamBuilder(
+                                stream: RatingsService().streamRatingsByTool(t.id),
+                                builder: (context, ratingSnap) {
+                                  if (!ratingSnap.hasData || ratingSnap.data!.isEmpty) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.star, color: Colors.amber, size: 14),
+                                          const SizedBox(width: 4),
+                                          const Text(
+                                            '0.0/5 (0)',
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                  final ratings = ratingSnap.data!;
+                                  final avgScore = ratings.fold(0.0, (s, r) => s + (r.toolRating ?? r.behavior)) / ratings.length;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.star, color: Colors.amber, size: 14),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${avgScore.toStringAsFixed(1)}/5 (${ratings.length})',
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              ToolAvailabilityBadge(tool: t, compact: true),
+                              if (t.isSuspicious)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.orange),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.warning, color: Colors.orange, size: 12),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Flagged: Under Review',
+                                          style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              if (t.visibility == 'hidden')
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.red),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.visibility_off, color: Colors.red, size: 12),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Hidden by Admin',
+                                          style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.currency_rupee, size: 16),
+                              Text('${t.pricePerDay.toStringAsFixed(0)}/day'),
+                            ],
+                          ),
+                          isThreeLine: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),

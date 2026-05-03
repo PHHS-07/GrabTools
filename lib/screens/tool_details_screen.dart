@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/review_model.dart';
-import '../services/bookings_service.dart';
 import '../services/ratings_service.dart';
 import '../services/reports_service.dart';
 import '../services/reviews_service.dart';
@@ -157,13 +156,19 @@ class ToolDetailsScreen extends StatelessWidget {
           if (t == null || (t.visibility == 'hidden' && profile?.id != t.ownerId && profile?.role != 'admin')) {
             return const Center(child: Text('Tool no longer available'));
           }
-          return StreamBuilder<bool>(
-            stream: BookingsService().streamToolCurrentlyUnavailable(t.id),
-            builder: (context, bookingSnap) {
-              final isCurrentlyUnavailable = bookingSnap.data ?? false;
-              final effectiveAvailability = t.available && !isCurrentlyUnavailable;
+          final now = DateTime.now();
+          final today = DateTime.utc(now.year, now.month, now.day);
+          final isBooked = t.bookedRanges.any((r) =>
+              (today.isAfter(r.startDate) || today.isAtSameMomentAs(r.startDate)) &&
+              (today.isBefore(r.endDate) || today.isAtSameMomentAs(r.endDate)));
+          final isBlocked = t.blockedRanges.any((r) =>
+              (today.isAfter(r.startDate) || today.isAtSameMomentAs(r.startDate)) &&
+              (today.isBefore(r.endDate) || today.isAtSameMomentAs(r.endDate)));
+          
+          final isCurrentlyUnavailable = isBooked || isBlocked;
+          final effectiveAvailability = t.available && !isCurrentlyUnavailable;
 
-              return SingleChildScrollView(
+          return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (t.imageUrls.isNotEmpty) SizedBox(height: 200, child: PageView(children: t.imageUrls.map((u) => Image.network(u, fit: BoxFit.cover)).toList())),
@@ -552,8 +557,6 @@ class ToolDetailsScreen extends StatelessWidget {
                   ]
                 ]),
               );
-            },
-          );
         },
       ),
     );

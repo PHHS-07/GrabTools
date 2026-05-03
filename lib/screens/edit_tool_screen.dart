@@ -8,6 +8,7 @@ import '../services/storage_service.dart';
 import '../services/vision_service.dart';
 import '../config/app_config.dart';
 import '../widgets/app_alerts.dart';
+import '../services/location_service.dart';
 import 'location_picker_screen.dart';
 
 class EditToolScreen extends StatefulWidget {
@@ -123,6 +124,27 @@ class _EditToolScreenState extends State<EditToolScreen> {
     }
   }
 
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isSaving = true); // Reuse saving state for loading
+    try {
+      final pos = await LocationService().getCurrentLocation();
+      if (pos != null && mounted) {
+        setState(() {
+          _selectedLocation = {
+            'lat': pos.latitude,
+            'lng': pos.longitude,
+          };
+          addressCtrl.text = 'My Current Location (${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)})';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Current location updated!')));
+      } else {
+        if (mounted) showErrorAlert(context, 'Unable to get current location. Ensure GPS is on.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1200);
     if (picked != null) setState(() => _pickedImage = File(picked.path));
@@ -189,6 +211,9 @@ class _EditToolScreenState extends State<EditToolScreen> {
       conditionStatus: _selectedConditionStatus ?? '',
       termsAndConditions: _selectedTcOption == _tcNone ? null : _selectedTcOption,
       available: _tool.available,
+      isSuspicious: _tool.isSuspicious,
+      isVerified: _tool.isVerified,
+      visibility: _tool.visibility,
     );
 
     await ToolsService().updateTool(updated);
@@ -299,6 +324,26 @@ class _EditToolScreenState extends State<EditToolScreen> {
                 validator: (v) => v == null || v.isEmpty ? 'Location required' : null,
               ),
             ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _pickLocation,
+                    icon: const Icon(Icons.map),
+                    label: const Text('Pick on Map'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _useCurrentLocation,
+                    icon: const Icon(Icons.my_location),
+                    label: const Text('Use Current'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             const Text('Terms and Conditions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
             const SizedBox(height: 4),
             Container(

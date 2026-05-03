@@ -210,9 +210,10 @@ class _HomeRouter extends StatelessWidget {
         final profile = auth.profile;
         final user = auth.user;
 
-        if (profile == null && user == null) return const LoginScreen();
+        if (user == null && profile == null) return const LoginScreen();
         
-        // Mock admin is always verified and skips email verification screen
+        // If we have a user but no profile yet, we can still proceed to Home
+        // while it loads in the background.
         if (user != null && !auth.isEmailVerified) {
           return const EmailVerificationScreen();
         }
