@@ -82,7 +82,7 @@ class _ToolListScreenState extends State<ToolListScreen> {
                           leading: t.imageUrls.isNotEmpty
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(t.imageUrls.first, width: 56, height: 56, fit: BoxFit.cover),
+                                  child: Image.network(t.imageUrls.first, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 28)),
                                 )
                               : const Icon(Icons.build),
                           title: Row(

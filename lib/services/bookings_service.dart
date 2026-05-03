@@ -61,23 +61,10 @@ class BookingsService {
          'status': status,
          'updatedAt': DateTime.now().toUtc(),
        });
-
-       // Update tool bookedDates upon confirmation
-       if (status == 'confirmed') {
-         final toolId = data['toolId'] as String?;
-         if (toolId != null) {
-           final toolRef = FirebaseFirestore.instance.collection('tools').doc(toolId);
-           final start = (data['startDate'] as dynamic).toDate() as DateTime;
-           final end = (data['endDate'] as dynamic).toDate() as DateTime;
-           transaction.update(toolRef, {
-             'bookedRanges': FieldValue.arrayUnion([{
-               'startDate': start.toUtc(),
-               'endDate': end.toUtc()
-             }])
-           });
-         }
-       }
     });
+    
+    // Sync bookedRanges to the tool document so the calendar updates correctly
+    _syncToolBookedRanges(data['toolId'] as String?);
 
     // If booking completed, credit lender earnings and update stats
     if (status == 'completed') {
@@ -133,6 +120,23 @@ class BookingsService {
       'paymentMethod': paymentMethod,
       'paymentReference': paymentReference,
     });
+  }
+
+  Future<void> processBookingPayment({
+    required String id,
+    required String method,
+    String? reference,
+    String? proofUrl,
+  }) async {
+    final data = <String, dynamic>{
+      'paymentStatus': 'paid',
+      'paymentMethod': method,
+      'status': 'paid',
+      'updatedAt': DateTime.now().toUtc(),
+    };
+    if (reference != null) data['paymentReference'] = reference;
+    if (proofUrl != null) data['paymentProofUrl'] = proofUrl;
+    await bookings.doc(id).update(data);
   }
 
   Future<void> submitPaymentProof(String id, String imageUrl) async {
@@ -228,13 +232,13 @@ class BookingsService {
     required bool approve,
   }) async {
     final docRef = bookings.doc(id);
-    await FirebaseFirestore.instance.runTransaction((transaction) async {
+    final toolId = await FirebaseFirestore.instance.runTransaction((transaction) async {
       final snapshot = await transaction.get(docRef);
-      if (!snapshot.exists) return;
+      if (!snapshot.exists) return null;
       final booking = _mapBooking(snapshot);
       final pendingType = booking.pendingActionType;
       final pendingStatus = booking.pendingActionStatus;
-      if (pendingType == null || pendingStatus != 'requested') return;
+      if (pendingType == null || pendingStatus != 'requested') return null;
 
       final updates = <String, dynamic>{
         'pendingActionType': FieldValue.delete(),
@@ -272,7 +276,35 @@ class BookingsService {
           SetOptions(merge: true),
         );
       }
+      return booking.toolId;
     });
+    
+    // Sync booked ranges after resolving action
+    if (toolId != null) {
+      _syncToolBookedRanges(toolId);
+    }
+  }
+
+  Future<void> _syncToolBookedRanges(String? toolId) async {
+    if (toolId == null) return;
+    try {
+      final snapshot = await bookings.where('toolId', isEqualTo: toolId).get();
+      final active = snapshot.docs.map(_mapBooking).where((b) {
+        final s = b.status.toLowerCase();
+        return s == 'approved' || s == 'confirmed' || s == 'paid' || s == 'verified' || s == 'in_progress' || s == 'active';
+      }).toList();
+      
+      final ranges = active.map((b) => {
+        'startDate': b.startDate.toUtc(),
+        'endDate': b.endDate.toUtc(),
+      }).toList();
+
+      await FirebaseFirestore.instance.collection('tools').doc(toolId).update({
+        'bookedRanges': ranges,
+      });
+    } catch (e) {
+      // Ignore
+    }
   }
 
   Stream<List<Booking>> streamBookingsForLender(String lenderId) {
@@ -282,19 +314,24 @@ class BookingsService {
   }
 
   Stream<bool> streamToolCurrentlyUnavailable(String toolId) {
-    return bookings.where('toolId', isEqualTo: toolId).snapshots().map((s) {
-      final now = DateTime.now();
-      return s.docs
-          .map(_mapBooking)
-          .any((booking) {
-            final normalizedStatus = booking.status.toLowerCase();
-            final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'confirmed' || normalizedStatus == 'in_progress';
-            if (!isAccepted) return false;
-            // Unavailable as soon as approved — covers both upcoming and ongoing bookings.
-            // Only clears once the booking end date has passed.
-            return booking.endDate.isAfter(now);
-          });
-    });
+    try {
+      return bookings.where('toolId', isEqualTo: toolId).snapshots().map((s) {
+        final now = DateTime.now();
+        return s.docs
+            .map(_mapBooking)
+            .any((booking) {
+              final normalizedStatus = booking.status.toLowerCase();
+              final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'confirmed' || normalizedStatus == 'in_progress';
+              if (!isAccepted) return false;
+              return booking.endDate.isAfter(now);
+            });
+      }).handleError((error) {
+        // Fallback to false if rules deny access
+        return false;
+      });
+    } catch (e) {
+      return Stream.value(false);
+    }
   }
 
   Stream<bool> streamToolEffectivelyAvailable({
@@ -307,18 +344,23 @@ class BookingsService {
   }
 
   Future<bool> isToolCurrentlyUnavailable(String toolId, DateTime requestedStart, DateTime requestedEnd) async {
-    final snapshot = await bookings.where('toolId', isEqualTo: toolId).get();
-    return snapshot.docs
-        .map(_mapBooking)
-        .any((booking) {
-          final normalizedStatus = booking.status.toLowerCase();
-          final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'confirmed' || normalizedStatus == 'in_progress';
-          if (!isAccepted) return false;
+    try {
+      final snapshot = await bookings.where('toolId', isEqualTo: toolId).get();
+      return snapshot.docs
+          .map(_mapBooking)
+          .any((booking) {
+            final normalizedStatus = booking.status.toLowerCase();
+            final isAccepted = normalizedStatus == 'approved' || normalizedStatus == 'confirmed' || normalizedStatus == 'in_progress';
+            if (!isAccepted) return false;
 
-          // Check for date overlap: (StartA <= EndB) and (EndA >= StartB)
-          final overlap = requestedStart.isBefore(booking.endDate) && requestedEnd.isAfter(booking.startDate);
-          return overlap;
-        });
+            // Check for date overlap: (StartA <= EndB) and (EndA >= StartB)
+            final overlap = requestedStart.isBefore(booking.endDate) && requestedEnd.isAfter(booking.startDate);
+            return overlap;
+          });
+    } catch (e) {
+      // Fallback to false if rules deny access
+      return false;
+    }
   }
 
   // --- New Dispute & Refund Features ---

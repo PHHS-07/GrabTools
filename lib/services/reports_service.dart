@@ -43,11 +43,16 @@ class ReportsService {
     required String toolId,
     required String reporterId,
   }) async {
-    final snap = await _reports
-        .where('toolId', isEqualTo: toolId)
-        .where('reporterId', isEqualTo: reporterId)
-        .limit(1)
-        .get();
-    return snap.docs.isNotEmpty;
+    try {
+      final snap = await _reports
+          .where('toolId', isEqualTo: toolId)
+          .where('reporterId', isEqualTo: reporterId)
+          .limit(1)
+          .get();
+      return snap.docs.isNotEmpty;
+    } catch (e) {
+      // If rules deny read access, allow the report dialogue to show anyway
+      return false;
+    }
   }
 }

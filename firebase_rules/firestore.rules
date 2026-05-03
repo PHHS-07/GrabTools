@@ -20,9 +20,9 @@ service cloud.firestore {
                     && request.resource.data.isVerified == false
                     && request.resource.data.visibility == 'visible';
       allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid 
-                    && request.resource.data.isSuspicious == resource.data.isSuspicious
-                    && request.resource.data.isVerified == resource.data.isVerified
-                    && request.resource.data.visibility == resource.data.visibility) || isAdmin();
+                    && request.resource.data.get('isSuspicious', false) == resource.data.get('isSuspicious', false)
+                    && request.resource.data.get('isVerified', false) == resource.data.get('isVerified', false)
+                    && request.resource.data.get('visibility', 'visible') == resource.data.get('visibility', 'visible')) || isAdmin();
       allow delete: if (request.auth != null && resource.data.ownerId == request.auth.uid) || isAdmin();
     }
 
@@ -33,7 +33,7 @@ service cloud.firestore {
 
     // Bookings - renters create bookings, lender/admin can update status, renter can ask for extension/return
     match /bookings/{bookingId} {
-      allow read: if request.auth != null && (request.auth.uid == resource.data.lenderId || request.auth.uid == resource.data.renterId || isAdmin());
+      allow read: if request.auth != null;
       allow create: if request.auth != null 
                     && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trustScore >= 40
                     && request.resource.data.renterId == request.auth.uid 
@@ -52,7 +52,8 @@ service cloud.firestore {
         (request.auth.uid == resource.data.lenderId && (
            (resource.data.status == 'requested' && request.resource.data.status == 'approved') ||
            (resource.data.status == 'paid' && request.resource.data.status == 'verified' && request.resource.data.paymentStatus == 'verified') ||
-           (resource.data.status == 'verified' && request.resource.data.status == 'completed' && (request.resource.data.proofConfidenceScore >= 50 || request.resource.data.proofSubmitted == false)) ||
+           (resource.data.status == 'verified' && request.resource.data.status == 'in_progress') ||
+           (resource.data.status == 'in_progress' && request.resource.data.status == 'completed') ||
            (request.resource.data.status == 'cancelled') ||
            (request.resource.data.status == resource.data.status && (
              (request.resource.data.refundStatus == 'approved' && resource.data.refundStatus == 'requested') ||
@@ -96,9 +97,10 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || request.auth.uid == resource.data.reviewerId;
     }
 
-    // Reports - authenticated users can create, admins can read
+    // Reports - authenticated users can create and read their own, admins can read/update/delete all
     match /reports/{reportId} {
-      allow read, update, delete: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.reporterId == request.auth.uid);
+      allow update, delete: if isAdmin();
       allow create: if request.auth != null && request.resource.data.reporterId == request.auth.uid;
     }
 

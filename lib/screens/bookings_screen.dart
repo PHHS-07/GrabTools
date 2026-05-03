@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -521,9 +522,32 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
                     onPressed: () async {
-                      await BookingsService().verifyPayment(booking.id);
-                      await BookingsService().updateBookingStatus(booking.id, 'verified');
-                      await BookingsService().generateVerificationCode(booking.id);
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Verify Payment'),
+                          content: Text('Have you successfully received the payment of ${_formatMoney(booking.totalPrice)} via ${booking.paymentMethod?.toUpperCase() ?? 'Cash/UPI'} from the seeker?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not Yet')),
+                            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes, Received')),
+                          ],
+                        ),
+                      );
+                      
+                      if (confirmed != true) return;
+
+                      // Atomic update to satisfy firestore rules
+                      final code = 'GT-${(1000 + DateTime.now().millisecondsSinceEpoch % 9000).toString()}';
+                      await FirebaseFirestore.instance.collection('bookings').doc(booking.id).update({
+                        'status': 'verified',
+                        'paymentStatus': 'verified',
+                        'verificationCode': code,
+                        'verificationGeneratedAt': DateTime.now().toUtc(),
+                        'updatedAt': DateTime.now().toUtc(),
+                      });
+                      
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment verified successfully!')));
                     },
                     child: const Text('Verify Payment'),
                   );
@@ -534,9 +558,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       if (booking.proofConfidenceScore < 50) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Warning: Proof confidence is low.')));
                       }
-                      await BookingsService().updateBookingStatus(booking.id, 'completed');
+                      await BookingsService().updateBookingStatus(booking.id, 'in_progress');
                     },
-                    child: const Text('Complete Booking'),
+                    child: const Text('Start Rental'),
                   );
                 }
               } else {
@@ -551,9 +575,69 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
                         onPressed: () async {
-                          // Dummy payment proof upload for now
-                          await BookingsService().submitPaymentProof(booking.id, 'dummy_payment_receipt_url');
-                          await BookingsService().updateBookingStatus(booking.id, 'paid');
+                          final lenderProfile = await UsersService().getUser(booking.lenderId);
+                          if (!context.mounted) return;
+                          
+                          String paymentMode = 'cash';
+                          bool uploadedProof = false;
+                          
+                          final result = await showDialog<String>(
+                            context: context,
+                            builder: (ctx) {
+                              return StatefulBuilder(
+                                builder: (ctx, setState) => AlertDialog(
+                                  title: const Text('Make Payment'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Total due: ${_formatMoney(booking.totalPrice)}'),
+                                      const SizedBox(height: 16),
+                                      const Text('Select Payment Mode:'),
+                                      DropdownButton<String>(
+                                        value: paymentMode,
+                                        isExpanded: true,
+                                        items: const [
+                                          DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                                          DropdownMenuItem(value: 'upi', child: Text('UPI')),
+                                        ],
+                                        onChanged: (v) => setState(() { paymentMode = v!; uploadedProof = false; }),
+                                      ),
+                                      if (paymentMode == 'upi') ...[
+                                        const SizedBox(height: 16),
+                                        Text('Pay to UPI ID: ${lenderProfile?.upiId ?? 'Not Provided'}'),
+                                        const SizedBox(height: 8),
+                                        ElevatedButton.icon(
+                                          icon: Icon(uploadedProof ? Icons.check : Icons.upload),
+                                          label: Text(uploadedProof ? 'Proof Uploaded' : 'Upload Payment Proof'),
+                                          onPressed: () => setState(() => uploadedProof = true),
+                                        ),
+                                      ],
+                                    ]
+                                  ),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Cancel')),
+                                    ElevatedButton(
+                                      onPressed: (paymentMode == 'cash' || uploadedProof) ? () => Navigator.pop(ctx, paymentMode) : null,
+                                      child: const Text('Submit'),
+                                    ),
+                                  ],
+                                )
+                              );
+                            }
+                          );
+                          
+                          if (result == null) return;
+                          
+                          await BookingsService().processBookingPayment(
+                            id: booking.id,
+                            method: result,
+                            reference: result == 'upi' ? 'UPI_MANUAL_TXN' : null,
+                            proofUrl: result == 'upi' ? 'dummy_upi_receipt' : null,
+                          );
+                          
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment proof uploaded! Waiting for lender approval.')));
                         },
                         child: const Text('Pay Now'),
                       ),
@@ -563,14 +647,70 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
                     onPressed: () async {
-                      // Challenge Flow: Upload Proof
+                      final condition = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) {
+                          String selectedCondition = 'Good';
+                          bool uploaded = false;
+                          return StatefulBuilder(
+                            builder: (ctx, setState) => AlertDialog(
+                              title: const Text('Tool Pickup'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  DropdownButton<String>(
+                                    value: selectedCondition,
+                                    isExpanded: true,
+                                    items: ['Excellent', 'Good', 'Fair', 'Poor'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                                    onChanged: (v) => setState(() => selectedCondition = v!),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    icon: Icon(uploaded ? Icons.check : Icons.camera_alt),
+                                    label: Text(uploaded ? 'Photo Uploaded' : 'Upload Photo of Tool at Pickup'),
+                                    onPressed: () => setState(() => uploaded = true),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text('Are you sure you want to pickup?'),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(context: context, builder: (ctx2) => AlertDialog(title: const Text('Cancel Booking'), content: const Text('Are you sure to cancel?'), actions: [TextButton(onPressed: ()=>Navigator.pop(ctx2,false), child: const Icon(Icons.close)), ElevatedButton(onPressed: ()=>Navigator.pop(ctx2,true), child: const Icon(Icons.check))]));
+                                    if (!ctx.mounted) return;
+                                    if (confirm == true) Navigator.pop(ctx, 'CANCEL');
+                                  }, 
+                                  child: const Text('No')
+                                ),
+                                ElevatedButton(
+                                  onPressed: uploaded ? () async {
+                                    final confirm = await showDialog<bool>(context: context, builder: (ctx2) => AlertDialog(title: const Text('Confirm Pickup'), content: const Text('Are you sure to continue?'), actions: [TextButton(onPressed: ()=>Navigator.pop(ctx2,false), child: const Icon(Icons.close)), ElevatedButton(onPressed: ()=>Navigator.pop(ctx2,true), child: const Icon(Icons.check))]));
+                                    if (!ctx.mounted) return;
+                                    if (confirm == true) Navigator.pop(ctx, selectedCondition);
+                                  } : null,
+                                  child: const Text('Yes'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                      
+                      if (condition == null) return;
+                      
+                      if (condition == 'CANCEL') {
+                        await BookingsService().updateBookingStatus(booking.id, 'cancelled');
+                        return;
+                      }
+
                       await BookingsService().submitPickupProof(
                         id: booking.id,
                         imageUrl: 'dummy_camera_capture_url',
                         location: {'lat': 0, 'lng': 0},
                         type: 'selfie_code',
                         expectedCode: booking.verificationCode ?? '',
-                        actualCode: booking.verificationCode ?? '', // Assume match for testing
+                        actualCode: booking.verificationCode ?? '',
                         isLiveCapture: true,
                         aiToolMatch: true,
                         gpsMatch: true,

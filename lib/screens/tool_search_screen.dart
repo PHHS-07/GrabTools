@@ -467,85 +467,127 @@ class _ToolSearchScreenState extends State<ToolSearchScreen> {
       ),
       body: Column(children: [
         // categories dropdown populated from available tools
-        StreamBuilder<List<Tool>>(
-          stream: ToolsService().streamTools(),
-          builder: (ctx, snap) {
-            final toolsAll = snap.data ?? [];
-            final categories = <String>{};
-            for (final t in toolsAll) {
-              categories.addAll(t.categories);
-            }
-            final sorted = categories.toList()..sort();
-            final availableCategories = sorted;
+        Flexible(
+          flex: 0,
+          child: StreamBuilder<List<Tool>>(
+            stream: ToolsService().streamTools(),
+            builder: (ctx, snap) {
+              final toolsAll = snap.data ?? [];
+              final categories = <String>{};
+              for (final t in toolsAll) {
+                categories.addAll(t.categories);
+              }
+              final sorted = categories.toList()..sort();
+              final availableCategories = sorted;
 
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(children: [
-                Row(children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilterChip(
-                          label: const Text('All'),
-                          selected: _selectedCategories.isEmpty,
-                          onSelected: (_) => setState(_selectedCategories.clear),
-                        ),
-                        ...availableCategories.map(
-                          (category) => FilterChip(
-                            label: Text(category),
-                            selected: _selectedCategories.contains(category),
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedCategories.add(category);
-                                } else {
-                                  _selectedCategories.remove(category);
-                                }
-                              });
-                            },
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(children: [
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              FilterChip(
+                                label: const Text('All'),
+                                selected: _selectedCategories.isEmpty,
+                                onSelected: (_) => setState(_selectedCategories.clear),
+                              ),
+                              const SizedBox(width: 8),
+                              ...availableCategories.map(
+                                (category) => Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: FilterChip(
+                                    label: Text(category),
+                                    selected: _selectedCategories.contains(category),
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedCategories.add(category);
+                                        } else {
+                                          _selectedCategories.remove(category);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 80, 
+                        child: TextField(
+                          controller: radiusCtrl, 
+                          decoration: const InputDecoration(labelText: 'km'),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => setState(() {}),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(child: TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Address (city or street)'))),
+                      const SizedBox(width: 8),
+                      ElevatedButton(onPressed: _geocoding ? null : () => _geocodeAddress(addressCtrl.text), child: _geocoding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Go')),
+                      const SizedBox(width: 8),
+                      ElevatedButton(onPressed: _geocoding ? null : _useMyLocation, child: const Icon(Icons.my_location)),
+                    ]),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ElevatedButton.icon(onPressed: _openFiltersDialog, icon: const Icon(Icons.filter_list), label: const Text('Filters')),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(width: 100, child: TextField(controller: radiusCtrl, decoration: const InputDecoration(labelText: 'km'))),
-                ]),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(child: TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Address (city or street)'))),
-                  const SizedBox(width: 8),
-                  ElevatedButton(onPressed: _geocoding ? null : () => _geocodeAddress(addressCtrl.text), child: _geocoding ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Go')),
-                  const SizedBox(width: 8),
-                  ElevatedButton(onPressed: _geocoding ? null : _useMyLocation, child: const Icon(Icons.my_location)),
-                ]),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ElevatedButton.icon(onPressed: _openFiltersDialog, icon: const Icon(Icons.filter_list), label: const Text('Filters')),
-                ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(children: [
-                    ElevatedButton.icon(onPressed: _assisting ? null : () => _openAssistanceDialog(availableCategories), icon: const Icon(Icons.help), label: _assisting ? const Text('Asking...') : const Text('Need Assistance')),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: _openHistoryScreen,
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Assistance History'),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: [
+                        ElevatedButton.icon(onPressed: _assisting ? null : () => _openAssistanceDialog(availableCategories), icon: const Icon(Icons.help), label: _assisting ? const Text('Asking...') : const Text('Need Assistance')),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _openHistoryScreen,
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: const Text('Assistance History'),
+                        ),
+                        const SizedBox(width: 8),
+                        if (_pickedImage != null) const Text('Image ready'),
+                      ]),
                     ),
-                    const SizedBox(width: 8),
-                    if (_pickedImage != null) const Text('Image ready'),
                   ]),
                 ),
-              ]),
-            );
-          },
+              );
+            },
+          ),
         ),
         const Divider(),
+        if (radius > 10.0)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                border: Border.all(color: Colors.red),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Max 10 km search radius is allowed',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         Expanded(
           child: StreamBuilder<List<Tool>>(stream: ToolsService().streamTools(), builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
@@ -560,7 +602,7 @@ class _ToolSearchScreenState extends State<ToolSearchScreen> {
                   .where((tool) => tool.categories.any(_selectedCategories.contains))
                   .toList();
             }
-            tools = tools.where((t) => _withinRadius(t, _userLat, _userLng, radius)).toList();
+            tools = tools.where((t) => _withinRadius(t, _userLat, _userLng, radius > 10.0 ? 10.0 : radius)).toList();
             if (_selectedConditions.isNotEmpty) {
               tools = tools.where((t) => _selectedConditions.contains(t.conditionStatus)).toList();
             }
@@ -625,7 +667,7 @@ class _ToolSearchScreenState extends State<ToolSearchScreen> {
                         leading: t.imageUrls.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.network(t.imageUrls.first, width: 56, height: 56, fit: BoxFit.cover),
+                                child: Image.network(t.imageUrls.first, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 28)),
                               )
                             : const Icon(Icons.build),
                         title: Text(t.title),

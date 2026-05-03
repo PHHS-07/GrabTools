@@ -131,17 +131,21 @@ class _ToolManagementScreenState extends State<ToolManagementScreen> {
             children: [
               if (anySuspicious)
                 Container(
-                  width: double.infinity,
-                  color: Colors.orange.shade50,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange, width: 1.5),
+                  ),
+                  child: const Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                      const SizedBox(width: 12),
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Some of your tools are under review. They may be hidden from search results until verified by an admin.',
-                          style: TextStyle(color: Colors.orange.shade900, fontSize: 13, fontWeight: FontWeight.w500),
+                          style: TextStyle(color: Colors.orange, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -162,12 +166,13 @@ class _ToolManagementScreenState extends State<ToolManagementScreen> {
                           leading: t.imageUrls.isNotEmpty
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    t.imageUrls.first,
-                                    width: 56,
-                                    height: 56,
-                                    fit: BoxFit.cover,
-                                  ),
+                                    child: Image.network(
+                                      t.imageUrls.first,
+                                      width: 56,
+                                      height: 56,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 28),
+                                    ),
                                 )
                               : const Icon(Icons.handyman, size: 28),
                           title: Text(
@@ -225,7 +230,7 @@ class _ToolManagementScreenState extends State<ToolManagementScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.orange.shade100,
+                                      color: Colors.orange.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(color: Colors.orange),
                                     ),
@@ -248,7 +253,7 @@ class _ToolManagementScreenState extends State<ToolManagementScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.red.shade100,
+                                      color: Colors.red.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(color: Colors.red),
                                     ),

@@ -182,7 +182,7 @@ class HomeScreen extends StatelessWidget {
                           },
                         ),
                       const SizedBox(height: 10),
-                      if (!isLender)
+                      if (!isLender && displayProfile.role != 'admin')
                         ElevatedButton.icon(
                           onPressed: () async {
                             final messenger = ScaffoldMessenger.of(context);
@@ -264,20 +264,22 @@ class HomeScreen extends StatelessWidget {
                             MaterialPageRoute(builder: (_) => const ToolSearchScreen()),
                           ),
                         ),
-                        _MenuCard(
-                          icon: Icons.star,
-                          label: 'My Ratings',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+                        if (displayProfile.role != 'admin')
+                          _MenuCard(
+                            icon: Icons.star,
+                            label: 'My Ratings',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+                            ),
                           ),
-                        ),
-                        _MenuCard(
-                          icon: Icons.book_online,
-                          label: 'My Bookings',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const BookingsScreen()),
+                        if (displayProfile.role != 'admin')
+                          _MenuCard(
+                            icon: Icons.book_online,
+                            label: 'My Bookings',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const BookingsScreen()),
+                            ),
                           ),
-                        ),
                       ],
               ),
             ],
@@ -304,9 +306,10 @@ class HomeScreen extends StatelessWidget {
         const _ShortcutItem(icon: Icons.location_on, label: 'Nearby Tools', route: '/nearby'),
       if (!isLender)
         const _ShortcutItem(icon: Icons.search, label: 'Search Tools', route: '/search'),
-      if (!isLender)
+      if (!isLender && profile.role != 'admin')
         const _ShortcutItem(icon: Icons.star, label: 'My Ratings', route: '/my-ratings'),
-      const _ShortcutItem(icon: Icons.list_alt, label: 'Bookings', route: '/bookings'),
+      if (profile.role != 'admin')
+        const _ShortcutItem(icon: Icons.list_alt, label: 'Bookings', route: '/bookings'),
       if (isLender) const _ShortcutItem(icon: Icons.storefront, label: 'Browse Tools', route: '/browse'),
       if (profile.role == 'admin')
         const _ShortcutItem(icon: Icons.admin_panel_settings, label: 'Admin Panel', route: '/admin'),

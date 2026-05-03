@@ -571,7 +571,7 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: _brandOrange, width: 2),
-              color: _cream.withValues(alpha: 0.65),
+              color: Colors.transparent,
             ),
             child: const Center(child: Text("Register Now", style: TextStyle(color: _brandOrange, fontWeight: FontWeight.bold))),
           ),
@@ -678,6 +678,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: DropdownButton<String>(
                 value: _selectedCountryCode,
                 isDense: true,
+                dropdownColor: Colors.white,
+                style: const TextStyle(color: Colors.black87),
                 onChanged: (v) {
                   if (v != null) {
                     setState(() => _selectedCountryCode = v);
@@ -697,18 +699,10 @@ class _LoginScreenState extends State<LoginScreen> {
             labelText: 'Gender',
             filled: true,
             fillColor: _cream,
-            labelStyle: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white70
-                  : Colors.black87,
-            ),
+            labelStyle: const TextStyle(color: Colors.black87),
           ),
-          dropdownColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1F1A15) : Colors.white,
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black87,
-          ),
+          dropdownColor: Colors.white,
+          style: const TextStyle(color: Colors.black87),
           items: const [
             DropdownMenuItem(value: 'Male', child: Text('Male')),
             DropdownMenuItem(value: 'Female', child: Text('Female')),

@@ -151,12 +151,22 @@ class _EditToolScreenState extends State<EditToolScreen> {
   }
 
   Future<void> _deleteImage(int idx) async {
-    final path = imagePaths[idx];
-    await StorageService().deleteFile(path);
-    setState(() {
-      imagePaths.removeAt(idx);
-      imageUrls.removeAt(idx);
-    });
+    try {
+      if (idx < imagePaths.length) {
+        final path = imagePaths[idx];
+        if (path.isNotEmpty) {
+          await StorageService().deleteFile(path);
+        }
+      }
+    } catch (e) {
+      // Ignore file deletion errors (e.g. file already deleted or doesn't exist)
+    }
+    if (mounted) {
+      setState(() {
+        if (idx < imagePaths.length) imagePaths.removeAt(idx);
+        if (idx < imageUrls.length) imageUrls.removeAt(idx);
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -379,7 +389,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
             const SizedBox(height: 4),
             Wrap(spacing: 8, children: List.generate(imageUrls.length, (i) {
               return Stack(children: [
-                Image.network(imageUrls[i], width: 100, height: 80, fit: BoxFit.cover),
+                Image.network(imageUrls[i], width: 100, height: 80, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40)),
                 Positioned(top: 0, right: 0, child: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteImage(i))),
               ]);
             })),

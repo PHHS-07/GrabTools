@@ -90,7 +90,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
-  Future<void> _updateAddress() async {
+  Future<void> _updateAddress({bool force = false}) async {
     if (_selectedLocation == null) return;
     final address = await addressService.getAddressFromCoordinates(
       _selectedLocation!.latitude,
@@ -98,7 +98,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
     if (!mounted) return;
     setState(() {
-      if (addressCtrl.text.isEmpty && address != null) {
+      if (address != null && (force || addressCtrl.text.isEmpty)) {
         addressCtrl.text = address;
       }
     });
@@ -170,8 +170,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     setState(() {
       _selectedLocation = location;
     });
-    _updateAddress();
     await _updateMarker();
+    await _updateAddress(force: true);
   }
 
   void _confirmLocation() {
@@ -345,8 +345,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     latitude: _currentPosition!.latitude,
                     longitude: _currentPosition!.longitude,
                   );
+                  setState(() {
+                    _selectedLocation = point;
+                  });
                   await _mapController.moveTo(point, animate: true);
                   await _mapController.setZoom(zoomLevel: 15);
+                  await _updateMarker();
+                  await _updateAddress(force: true);
                 },
                 child: const Icon(Icons.my_location),
               ),

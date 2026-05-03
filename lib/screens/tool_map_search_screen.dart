@@ -156,13 +156,40 @@ class _ToolMapSearchScreenState extends State<ToolMapSearchScreen> {
                           ),
                         ),
                         Expanded(
-                          child: StreamBuilder<List<Tool>>(
-                            stream: ToolsService().streamToolsNearby(
-                              userLat: _userLocation!.latitude,
-                              userLng: _userLocation!.longitude,
-                              radiusKm: _radiusKm,
-                              category: _selectedCategory,
-                            ),
+                          child: Column(
+                            children: [
+                              if (_radiusKm > 10.0)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withValues(alpha: 0.1),
+                                      border: Border.all(color: Colors.red),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.error_outline, color: Colors.red),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Max 10 km search radius is allowed',
+                                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              Expanded(
+                                child: StreamBuilder<List<Tool>>(
+                                  stream: ToolsService().streamToolsNearby(
+                                    userLat: _userLocation!.latitude,
+                                    userLng: _userLocation!.longitude,
+                                    radiusKm: _radiusKm > 10.0 ? 10.0 : _radiusKm,
+                                    category: _selectedCategory,
+                                  ),
                             builder: (context, snap) {
                               if (snap.connectionState == ConnectionState.waiting) {
                                 return const Center(child: CircularProgressIndicator());
@@ -214,6 +241,7 @@ class _ToolMapSearchScreenState extends State<ToolMapSearchScreen> {
                                               width: 56,
                                               height: 56,
                                               fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 28),
                                             )
                                           : const Icon(Icons.build),
                                       title: Text(t.title),
@@ -304,6 +332,9 @@ class _ToolMapSearchScreenState extends State<ToolMapSearchScreen> {
                               );
                             },
                           ),
+                                ),
+                              ],
+                            ),
                         ),
                       ],
                     ),

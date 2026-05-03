@@ -21,7 +21,7 @@ class AdminPanelScreen extends StatelessWidget {
               Tab(text: 'Disputes', icon: Icon(Icons.gavel)),
               Tab(text: 'Pending Reports', icon: Icon(Icons.report)),
               Tab(text: 'Suspicious Tools', icon: Icon(Icons.warning)),
-              Tab(text: 'Low Trust Users', icon: Icon(Icons.person_off)),
+              Tab(text: 'Low Trust', icon: Icon(Icons.person_off)),
             ],
           ),
         ),
@@ -134,7 +134,7 @@ class _SuspiciousToolsTab extends StatelessWidget {
                 leading: tool.imageUrls.isNotEmpty 
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(tool.imageUrls.first, width: 50, height: 50, fit: BoxFit.cover),
+                      child: Image.network(tool.imageUrls.first, width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 28)),
                     )
                   : const Icon(Icons.build, size: 40),
                 title: Text(tool.title, style: const TextStyle(fontWeight: FontWeight.bold)),

@@ -56,49 +56,51 @@ class ToolDetailsScreen extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Report Tool'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Why are you reporting this listing?'),
-              const SizedBox(height: 12),
-              Column(
-                children: _reportReasons.map((reason) => InkWell(
-                  onTap: () => setDialogState(() => selectedReason = reason),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Icon(
-                          selectedReason == reason
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          size: 20,
-                          color: selectedReason == reason
-                              ? Theme.of(ctx).colorScheme.primary
-                              : Colors.grey,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(reason, style: const TextStyle(fontSize: 14)),
-                        ),
-                      ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Why are you reporting this listing?'),
+                const SizedBox(height: 12),
+                Column(
+                  children: _reportReasons.map((reason) => InkWell(
+                    onTap: () => setDialogState(() => selectedReason = reason),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedReason == reason
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            size: 20,
+                            color: selectedReason == reason
+                                ? Theme.of(ctx).colorScheme.primary
+                                : Colors.grey,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(reason, style: const TextStyle(fontSize: 14)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                )).toList(),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: detailsCtrl,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  hintText: 'Additional details (optional)',
-                  border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  )).toList(),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                TextField(
+                  controller: detailsCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    hintText: 'Additional details (optional)',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -171,7 +173,7 @@ class ToolDetailsScreen extends StatelessWidget {
           return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (t.imageUrls.isNotEmpty) SizedBox(height: 200, child: PageView(children: t.imageUrls.map((u) => Image.network(u, fit: BoxFit.cover)).toList())),
+                  if (t.imageUrls.isNotEmpty) SizedBox(height: 200, child: PageView(children: t.imageUrls.map((u) => Image.network(u, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 64, color: Colors.grey))).toList())),
                   const SizedBox(height: 12),
                   Text(t.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   if (t.isVerified) ...[

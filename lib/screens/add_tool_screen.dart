@@ -189,6 +189,33 @@ class _AddToolScreenState extends State<AddToolScreen> {
 
       final categories = categoriesCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
+      bool aiSuspicious = false;
+      double aiScore = 100.0;
+      try {
+        final prompt = '''
+You are an advanced fraud detection AI.
+Analyze this proof of ownership image. It should contain a physical tool and a handwritten note with "GrabTools" and today's date.
+Does this image look AI-generated, digitally altered, fake, or missing the handwritten note? 
+Return ONLY JSON in this exact shape:
+{"isFake": true, "confidenceScore": 30} 
+If it looks like a real physical object with a real handwritten note, return {"isFake": false, "confidenceScore": 95}
+No markdown, no extra text.
+''';
+        final aiRes = await auth.aiService.query(prompt, imageUrl: proofUrl);
+        final text = (aiRes['text'] ?? aiRes['result'] ?? aiRes['answer'] ?? '').toString();
+        final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+        if (jsonMatch != null) {
+          final map = json.decode(jsonMatch.group(0)!) as Map<String, dynamic>;
+          if (map['isFake'] == true) aiSuspicious = true;
+          if (map['confidenceScore'] != null) {
+            aiScore = (map['confidenceScore'] as num).toDouble();
+            if (aiScore < 60) aiSuspicious = true;
+          }
+        }
+      } catch (_) {
+        // Proceed even if AI check fails
+      }
+
       final tool = Tool(
         id: '',
         ownerId: ownerId,
@@ -205,9 +232,10 @@ class _AddToolScreenState extends State<AddToolScreen> {
         conditionStatus: _selectedConditionStatus ?? '',
         termsAndConditions: _selectedTcOption == _tcStrict ? _tcStrict : null,
         available: true,
-        isSuspicious: profile.trustScore < 50, // automatically flag for manual approval if < 50
+        isSuspicious: profile.trustScore < 50 || aiSuspicious, // automatically flag if trust < 50 or AI flags it
         isVerified: false,
         visibility: 'visible',
+        aiConfidenceScore: aiScore,
       );
 
       await toolsService.addTool(tool);
